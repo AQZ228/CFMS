@@ -1,0 +1,17 @@
+{
+    "name": "sanae/backend",
+    "autoload": {
+        "psr-4": {
+            "Lib\\": "include/"
+        }
+    },
+    "authors": [
+        {
+            "name": "OtonariShunji",
+            "email": "shunji@otonari.dev"
+        }
+    ],
+    "require": {
+        "robmorgan/phinx": "^0.16.12"
+    }
+}
