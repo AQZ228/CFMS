@@ -8,14 +8,8 @@ $password = getenv('DB_PASS');
 $port = getenv('DB_PORT') ?: '3306';
 
 if (!$host || !$dbname || !$user || !$password) {
-    // echo と die() を使って、無理やり画面に出力して終了させる
-    echo "\n=== [DEBUG] 環境変数が不足しています ===\n";
-    echo "DB_HOST: " . var_export($host, true) . "\n";
-    echo "DB_NAME: " . var_export($dbname, true) . "\n";
-    echo "DB_USER: " . var_export($user, true) . "\n";
-    echo "DB_PASS: " . var_export($password, true) . "\n";
-    echo "========================================\n\n";
-    die();
+    fwrite(STDERR, "\n=== [ERROR] 必要な環境変数が不足しています ===\n");
+    exit(1);
 }
 
 return
@@ -34,7 +28,7 @@ return
                 'user' => $user,
                 'pass' => $password,
                 'port' => $port,
-                'charset' => 'utf8',
+                'charset' => 'utf8mb4',
             ],
             'development' => [
                 'adapter' => 'mysql',
@@ -43,7 +37,7 @@ return
                 'user' => $user,
                 'pass' => $password,
                 'port' => $port,
-                'charset' => 'utf8',
+                'charset' => 'utf8mb4',
             ],
             'testing' => [
                 'adapter' => 'mysql',
@@ -52,7 +46,7 @@ return
                 'user' => $user,
                 'pass' => $password,
                 'port' => $port,
-                'charset' => 'utf8',
+                'charset' => 'utf8mb4',
             ]
         ],
         'version_order' => 'creation'
