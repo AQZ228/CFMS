@@ -2,7 +2,7 @@
     "name": "sanae/backend",
     "autoload": {
         "psr-4": {
-            "lib\\": "include/"
+            "Lib\\": "include/"
         }
     },
     "authors": [
