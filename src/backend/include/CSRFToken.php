@@ -5,13 +5,16 @@ namespace lib;
 class CSRFToken
 {
     private ?string $_token;
+    private Session $_session;
 
+    /**
+     * コンストラクタ
+     * セッションからトークンを取得（存在しない場合はnull）
+     */
     public function __construct()
     {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            session_start();
-        }
-        $this->_token = $_SESSION['csrf_token'] ?? null;
+        $this->_session = new Session();
+        $this->_token = $this->_session->csrf_token ?? null;
     }
 
     /**
@@ -21,7 +24,7 @@ class CSRFToken
     {
         if (empty($this->_token)) {
             $this->_token = bin2hex(random_bytes(32));
-            $_SESSION['csrf_token'] = $this->_token;
+            $this->_session->csrf_token = $this->_token;
         }
 
         return $this->_token;
@@ -53,7 +56,7 @@ class CSRFToken
      */
     public function clearToken(): void
     {
-        unset($_SESSION['csrf_token']);
+        $this->_session->remove('csrf_token');
         $this->_token = null;
     }
 }
