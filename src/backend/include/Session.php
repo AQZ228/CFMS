@@ -6,12 +6,33 @@ class Session
 {
     /**
      * コンストラクタ
-     * セッションが存在しない場合、session_startします。
+     * セッションが開始されていない場合は開始する
+     * @throws \RuntimeException セッションが無効化されている場合や、ヘッダーが既に送信されている場合にスローされる
      */
     public function __construct()
     {
+        if (session_status() === PHP_SESSION_DISABLED) {
+            throw new \RuntimeException('Sessions are disabled.');
+        }
+
         if (session_status() !== PHP_SESSION_ACTIVE) {
-            session_start();
+            if (headers_sent($file, $line)) {
+                throw new \RuntimeException("Cannot start session. Headers already sent in {$file} on line {$line}.");
+            }
+
+            // セッションクッキーのセキュリティ設定を適用
+            $success = session_set_cookie_params([
+                'lifetime' => 0,
+                'path' => '/',
+                'domain' => '',
+                'secure' => Develop::isDevelopment() ? false : true, // 開発環境ではfalse、本番環境ではtrue
+                'httponly' => true, // JavaScriptからのアクセスを禁止
+                'samesite' => 'Lax' // CSRF対策
+            ]);
+
+            if (!session_start() || !$success) {
+                throw new \RuntimeException('Failed to start the session.');
+            }
         }
     }
     /**
