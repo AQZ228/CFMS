@@ -7,7 +7,6 @@ use PDOStatement;
 class DB
 {
     private \PDO $pdo;
-    private ?PDOStatement $stmt;
 
     /**
      * DBクラスのインスタンスを環境変数から生成する
@@ -16,7 +15,15 @@ class DB
      */
     public static function connect(): self
     {
-        return new self(getenv('DB_HOST'), getenv('DB_NAME'), getenv('DB_USER'), getenv('DB_PASS'));
+        $host = getenv('DB_HOST');
+        $dbname = getenv('DB_NAME');
+        $user = getenv('DB_USER');
+        $password = getenv('DB_PASS');
+
+        if ($host === false || $dbname === false || $user === false || $password === false) {
+            throw new \RuntimeException('Required database environment variables are not set.');
+        }
+        return new self($host, $dbname, $user, $password);
     }
 
     /**
@@ -69,7 +76,7 @@ class DB
         return false;
     }
     /**
-     * SQLを実行し、影響を受けた行数を返す
+     * SQLを実行し、結果のステートメントを返す
      * @param string $sql 実行するSQL文
      * @param array $params バインドするパラメータ
      * @return \PDOStatement 実行されたSQLのステートメント
