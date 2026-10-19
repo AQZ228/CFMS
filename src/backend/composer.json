@@ -3,7 +3,10 @@
     "autoload": {
         "psr-4": {
             "Lib\\": "include/"
-        }
+        },
+        "files": [
+            "config/bootstrap.php"
+        ]
     },
     "authors": [
         {
