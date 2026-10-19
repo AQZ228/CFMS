@@ -39,8 +39,10 @@ class DB
         try {
             $this->pdo = new \PDO("mysql:host={$host};dbname={$dbname};charset=utf8mb4", $user, $password);
             $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+            $this->pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
         } catch (\PDOException $e) {
-            throw new \RuntimeException('Database connection failed: ' . $e->getMessage());
+            error_log('Database connection failed: ' . $e->getMessage());
+            throw new \RuntimeException('Database connection failed.');
         }
     }
     /**
