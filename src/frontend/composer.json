@@ -10,8 +10,5 @@
             "name": "OtonariShunji",
             "email": "shunji@otonari.dev"
         }
-    ],
-    "require": {
-        "robmorgan/phinx": "^0.16.12"
-    }
+    ]
 }
