@@ -25,16 +25,6 @@ class Session
         $_SESSION[$key] = $value;
     }
     /**
-     * マジックメソッド
-     * @param string $key
-     * @param mixed $value
-     * @return void
-     */
-    public function __set(string $key, mixed $value): void
-    {
-        $this->set($key, $value);
-    }
-    /**
      * セッションの値を取得
      * @param string $key
      * @return mixed
@@ -42,15 +32,6 @@ class Session
     public function get(string $key): mixed
     {
         return $_SESSION[$key] ?? null;
-    }
-    /**
-     * マジックメソッド
-     * @param string $key
-     * @return mixed
-     */
-    public function __get(string $key): mixed
-    {
-        return $this->get($key);
     }
     /**
      * セッションの値を削除

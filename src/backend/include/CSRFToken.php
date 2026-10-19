@@ -14,7 +14,7 @@ class CSRFToken
     public function __construct()
     {
         $this->_session = new Session();
-        $this->_token = $this->_session->csrf_token ?? null;
+        $this->_token = $this->_session->get('csrf_token') ?? null;
     }
 
     /**
@@ -24,7 +24,7 @@ class CSRFToken
     {
         if (empty($this->_token)) {
             $this->_token = bin2hex(random_bytes(32));
-            $this->_session->csrf_token = $this->_token;
+            $this->_session->set('csrf_token', $this->_token);
         }
 
         return $this->_token;
