@@ -37,7 +37,7 @@ class CSRFToken
      * @param bool $consume 検証後にトークンを消費（破棄）するかどうか
      * @return bool
      */
-    public function validateToken(?string $token, bool $consume = true): bool
+    public function validateToken(?string $token, bool $consume = false): bool
     {
         if (empty($this->_token) || empty($token)) {
             return false;
