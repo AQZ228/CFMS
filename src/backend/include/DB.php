@@ -10,6 +10,16 @@ class DB
     private ?PDOStatement $stmt;
 
     /**
+     * DBクラスのインスタンスを環境変数から生成する
+     * DB_HOST, DB_NAME, DB_USER, DB_PASSの環境変数が必要です。
+     * @return self
+     */
+    public static function connect(): self
+    {
+        return new self(getenv('DB_HOST'), getenv('DB_NAME'), getenv('DB_USER'), getenv('DB_PASS'));
+    }
+
+    /**
      * DBクラスのコンストラクタ
      * @param string $host
      * @param string $dbname
