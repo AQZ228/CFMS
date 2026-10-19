@@ -61,7 +61,7 @@ class DB
      * @return bool 成功したかどうか
      * トランザクションが開始されていない場合はfalseを返す
      */
-    public function rollback()
+    public function rollback(): bool
     {
         if ($this->pdo->inTransaction()) {
             return $this->pdo->rollBack();
@@ -72,44 +72,12 @@ class DB
      * SQLを実行し、影響を受けた行数を返す
      * @param string $sql 実行するSQL文
      * @param array $params バインドするパラメータ
-     * @return int 影響を受けた行数
+     * @return \PDOStatement 実行されたSQLのステートメント
      */
-    public function exec(string $sql, array $params = []): int
+    public function exec(string $sql, array $params = []): \PDOStatement
     {
-        $this->stmt = $this->pdo->prepare($sql);
-        $this->stmt->execute($params);
-        return $this->stmt->rowCount();
-    }
-    /**
-     * 影響を受けた行数を取得する
-     * @return int 影響を受けた行数
-     */
-    public function getRowCount(): int
-    {
-        return $this->stmt ? $this->stmt->rowCount() : 0;
-    }
-    /**
-     * 1行を取得する
-     * @param int $mode 取得モード
-     * @return mixed 取得した行、ない場合はfalse
-     */
-    public function fetch($mode = \PDO::FETCH_ASSOC): mixed
-    {
-        if (!$this->stmt) {
-            throw new \RuntimeException('No statement executed. Please call exec() first.');
-        }
-        return $this->stmt->fetch($mode);
-    }
-    /**
-     * 全行を取得する
-     * @param int $mode 取得モード
-     * @return array 取得した行の配列
-     */
-    public function fetchAll($mode = \PDO::FETCH_ASSOC): array
-    {
-        if (!$this->stmt) {
-            throw new \RuntimeException('No statement executed. Please call exec() first.');
-        }
-        return $this->stmt->fetchAll($mode);
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt;
     }
 }
