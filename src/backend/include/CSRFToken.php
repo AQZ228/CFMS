@@ -4,7 +4,6 @@ namespace Lib;
 
 class CSRFToken
 {
-    private ?string $_token;
     private Session $_session;
 
     /**
@@ -14,7 +13,6 @@ class CSRFToken
     public function __construct()
     {
         $this->_session = new Session();
-        $this->_token = $this->_session->get('csrf_token') ?? null;
     }
 
     /**
@@ -22,12 +20,11 @@ class CSRFToken
      */
     public function generateToken(): string
     {
-        if (empty($this->_token)) {
-            $this->_token = bin2hex(random_bytes(32));
-            $this->_session->set('csrf_token', $this->_token);
+        if (empty($this->_session->get('csrf_token'))) {
+            $this->_session->set('csrf_token', bin2hex(random_bytes(32)));
         }
 
-        return $this->_token;
+        return $this->_session->get('csrf_token');
     }
 
     /**
@@ -39,11 +36,11 @@ class CSRFToken
      */
     public function validateToken(?string $token, bool $consume = false): bool
     {
-        if (empty($this->_token) || empty($token)) {
+        if (empty($this->_session->get('csrf_token')) || empty($token)) {
             return false;
         }
 
-        $isValid = hash_equals($this->_token, $token);
+        $isValid = hash_equals($this->_session->get('csrf_token'), $token);
         if ($isValid && $consume) {
             $this->clearToken();
         }
@@ -57,6 +54,5 @@ class CSRFToken
     public function clearToken(): void
     {
         $this->_session->remove('csrf_token');
-        $this->_token = null;
     }
 }
