@@ -1,8 +1,11 @@
+version: 2
+
 updates:
   - package-ecosystem: composer
     directory: /src/backend/
     schedule:
       interval: daily
+    open-pull-requests-limit: 2
     target-branch: main
     groups:
       production-dependencies:
@@ -13,10 +16,12 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
+  
   - package-ecosystem: composer
     directory: /src/frontend/
     schedule:
       interval: daily
+    open-pull-requests-limit: 2
     target-branch: main
     groups:
       production-dependencies:
