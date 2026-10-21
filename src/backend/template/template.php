@@ -82,6 +82,22 @@ if (!$sessionCsrfToken->validateToken($csrfToken)) {
 
 //SECTION: 処理の実行
 //TODO: 入力に基づく処理を実行する
+
+//ANCHOR - ダミーデータの生成
+$dummyData = [];
+$db = Lib\DB::connect();
+$stmt = $db->exec("SELECT 1 as dummy"); // ダミーのクエリ実行
+$stmt->setFetchMode(\PDO::FETCH_ASSOC);
+while ($stmt->rowCount() > 0) {
+    $row = $stmt->fetch();
+    if ($row) {
+        $dummyData[] = $row;
+    } else {
+        break;
+    }
+}
+
+//ANCHOR - メイン処理
 $resultData = [];
 for ($i = 0; $i < $age; $i++) {
     $resultData[] = ["message" => $message];
@@ -89,6 +105,7 @@ for ($i = 0; $i < $age; $i++) {
 echo json_encode([
     "success" => true,
     "message" => "処理が成功しました。",
-    "data" => $resultData
+    "data" => $resultData,
+    "dummyData" => $dummyData
 ]);
 //!SECTION
