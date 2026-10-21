@@ -31,7 +31,15 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/vendor/autoload.php';
 //!SECTION
 
 //SECTION: 入力のバリデーション
-// トークンを発行するだけなので、特別なパラメータのバリデーションは不要です。
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode([
+        "success" => false,
+        "message" => "許可されていないHTTPメソッドです。",
+        "data" => []
+    ]);
+    exit;
+}
 //!SECTION
 
 //SECTION: 処理の実行
