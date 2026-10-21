@@ -57,7 +57,7 @@ if ($message === null || $age === null || $csrfToken === null) {
     echo json_encode([
         "success" => false,
         "message" => "必要なパラメータが不足しています。",
-        "data" => [$message, $age, $csrfToken]
+        "data" => []
     ]);
     exit;
 }
