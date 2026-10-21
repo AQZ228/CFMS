@@ -26,13 +26,9 @@
     <title>Templateページ</title> <!-- TODO: ページタイトルを変更する -->
     <meta name="description" content="templateページの説明"> <!-- TODO: ページ説明を変更する -->
 
-
     <!-- bootstrap読み込み -->
     <link rel="stylesheet" href="/lib/bootstrap-5.3.8-dist/css/bootstrap.min.css">
     <script src="/lib/bootstrap-5.3.8-dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- csrfトークンの設定 -->
-    <script src="/lib/js/fetch_csrf_token.js"></script>
 </head>
 
 <body>
