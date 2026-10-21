@@ -8,6 +8,7 @@
  * 実際に書く際には以下の例のように記述します。
  * 
  * ageの数だけdata配列に入力のmessageを格納し返します。
+ * ageは0から120の範囲で指定してください。
  * 入力: {
  *      messsge: "こんにちは",
  *      csrf_token: "CSRFトークン",
@@ -60,11 +61,19 @@ if ($message === null || $age === null || $csrfToken === null) {
     ]);
     exit;
 }
+if ($age < 0 || $age > 120) {
+    echo json_encode([
+        "success" => false,
+        "message" => "年齢は0から120の範囲で指定してください。",
+        "data" => []
+    ]);
+    exit;
+}
 
 if (!$sessionCsrfToken->validateToken($csrfToken)) {
     echo json_encode([
         "success" => false,
-        "message" => "Bad CSRF Token:" . $csrfToken . "\tto:" . $sessionCsrfToken->generateToken(),
+        "message" => "CSRFトークンが無効です。",
         "data" => []
     ]);
     exit;
@@ -73,7 +82,6 @@ if (!$sessionCsrfToken->validateToken($csrfToken)) {
 
 //SECTION: 処理の実行
 //TODO: 入力に基づく処理を実行する
-
 $resultData = [];
 for ($i = 0; $i < $age; $i++) {
     $resultData[] = ["message" => $message];
