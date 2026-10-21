@@ -62,7 +62,7 @@ if ($message === null || $age === null || $csrfToken === null) {
     exit;
 }
 $age = filter_var($age, FILTER_VALIDATE_INT);
-if ($age < 0 || $age > 120) {
+if ($age === false || $age < 0 || $age > 120) {
     echo json_encode([
         "success" => false,
         "message" => "年齢は0から120の範囲で指定してください。",
