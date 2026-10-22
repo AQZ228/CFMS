@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="280" height="280">
+  <defs>
+    <!-- 背景グラデーション -->
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#7c3aed" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+
+    <!-- シンボル・プレート用グラデーション -->
+    <linearGradient id="symbolGrad3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#c7d2fe" />
+    </linearGradient>
+
+    <!-- NKCテキスト用：上品で自然なアイスブルーグラデーション -->
+    <linearGradient id="nkcSoftGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#bce0ff" />
+    </linearGradient>
+
+    <!-- アクセントグラデーション (輝き・発光) -->
+    <linearGradient id="accent3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+
+    <!-- リッチドロップシャドウ（プレート用） -->
+    <filter id="shadow3" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="20" stdDeviation="20" flood-color="#0f172a" flood-opacity="0.45" />
+    </filter>
+
+    <!-- ソフトな発光・微細シャドウ（黒影なし） -->
+    <filter id="softGlowOnly" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- アイコンベース（角丸正方形） -->
+  <rect x="32" y="32" width="448" height="448" rx="100" fill="url(#bg3)" filter="url(#shadow3)" />
+
+  <!-- 光沢ハイライト（トップグラス） -->
+  <path d="M 32,132 C 32,76.77 76.77,32 132,32 L 380,32 C 435.23,32 480,76.77 480,132 L 480,210 C 300,160 150,220 32,280 Z" fill="#ffffff" opacity="0.12" />
+
+  <!-- 背景のお祭りガーランド -->
+  <g opacity="0.35">
+    <path d="M 80,75 Q 256,120 432,75" fill="none" stroke="#a5b4fc" stroke-width="4" stroke-dasharray="8 8" />
+    <polygon points="120,87 140,120 100,120" fill="#f43f5e" />
+    <polygon points="200,102 220,135 180,135" fill="#fbbf24" />
+    <polygon points="280,102 300,135 260,135" fill="#34d399" />
+    <polygon points="360,87 380,120 340,120" fill="#38bdf8" />
+  </g>
+
+  <!-- メイン立体プレート -->
+  <g filter="url(#shadow3)">
+    <!-- 外側フレーム -->
+    <rect x="100" y="85" width="312" height="290" rx="56" fill="url(#symbolGrad3)" opacity="0.95" />
+    <!-- 内側落ち込み深みレイヤー -->
+    <rect x="116" y="101" width="280" height="258" rx="44" fill="#1e1b4b" />
+
+    <!-- 控えめなQRコードモチーフ -->
+    <g fill="url(#accent3)" filter="url(#softGlowOnly)" opacity="0.85">
+      <!-- 左上 切り出しシンボル -->
+      <rect x="140" y="125" width="56" height="56" rx="12" />
+      <rect x="152" y="137" width="32" height="32" rx="6" fill="#1e1b4b" />
+      <rect x="162" y="147" width="12" height="12" rx="3" fill="url(#accent3)" />
+
+      <!-- 右上 切り出しシンボル -->
+      <rect x="316" y="125" width="56" height="56" rx="12" />
+      <rect x="328" y="137" width="32" height="32" rx="6" fill="#1e1b4b" />
+      <rect x="338" y="147" width="12" height="12" rx="3" fill="url(#accent3)" />
+
+      <!-- 左下 切り出しシンボル -->
+      <rect x="140" y="275" width="56" height="56" rx="12" />
+      <rect x="152" y="287" width="32" height="32" rx="6" fill="#1e1b4b" />
+      <rect x="162" y="297" width="12" height="12" rx="3" fill="url(#accent3)" />
+
+      <!-- 控えめなデータドット -->
+      <circle cx="216" cy="135" r="5" />
+      <circle cx="236" cy="153" r="5" />
+      <circle cx="296" cy="135" r="5" />
+      <circle cx="150" cy="200" r="5" />
+      <circle cx="362" cy="200" r="5" />
+
+      <!-- 右下アライメント -->
+      <rect x="324" y="283" width="40" height="40" rx="10" />
+      <rect x="334" y="293" width="20" height="20" rx="4" fill="#1e1b4b" />
+      <rect x="340" y="299" width="8" height="8" rx="2" fill="url(#accent3)" />
+    </g>
+
+    <!-- 中央モチーフ: 立体シールド／ダイヤモンドエンブレム -->
+    <g filter="url(#shadow3)">
+      <!-- シールド外枠 -->
+      <path d="M 256,130 L 320,160 V 220 C 320,258 256,285 256,285 C 256,285 192,258 192,220 V 160 Z" fill="url(#symbolGrad3)" opacity="0.95" />
+      <!-- シールド内側 -->
+      <path d="M 256,145 L 308,169 V 215 C 308,244 256,267 256,267 C 256,267 204,244 204,215 V 169 Z" fill="#1e1b4b" />
+      <!-- 内側コアアクセント -->
+      <path d="M 256,177 L 280,200 L 270,234 L 242,234 L 232,200 Z" fill="url(#accent3)" filter="url(#softGlowOnly)" />
+      <circle cx="256" cy="207" r="10" fill="#ffffff" />
+    </g>
+  </g>
+
+  <!-- テキスト: NKC（黒影を排除し、滑らかなアイスブルーグラデーションで自然になじませる） -->
+  <text x="256" y="412" font-family="system-ui, -apple-system, &#39;Segoe UI&#39;, Roboto, sans-serif" font-size="130" font-weight="900" letter-spacing="0" fill="url(#nkcSoftGrad)" text-anchor="middle" filter="url(#softGlowOnly)">NKC</text>
+</svg>
