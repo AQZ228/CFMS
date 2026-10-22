@@ -158,9 +158,14 @@
                 line-height: 1.5;
             }
 
+            #copyTokenButton,
             #generateButton,
             #refreshButton {
                 min-height: 44px;
+            }
+
+            #copyTokenButton {
+                width: 100%;
             }
 
             /* 詳細情報はラベルと値の間隔を詰めて読みやすく */
@@ -253,7 +258,12 @@
     </style>
 </head>
 <body>
-
+    <nav class="navbar navbar-dark navbar-cfms">
+        <div class="container page-container">
+            <a class="navbar-brand fw-bold" href="/index.php">CFMS</a>
+            <span class="navbar-text text-white">ユーザーメインページ</span>
+        </div>
+    </nav>
 
     <main class="container page-container py-4 py-md-5">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
@@ -315,6 +325,9 @@
                             </div>
                             <div class="small text-secondary mb-1">トークン</div>
                             <div id="userToken" class="token-value border rounded bg-light p-2 small">-</div>
+                            <button id="copyTokenButton" class="btn btn-outline-primary btn-sm mt-2" type="button">
+                                トークンをコピー
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -364,9 +377,6 @@
         // API_URLは環境変数で設定します。未設定の場合は同一オリジンを使用します。
         const API_BASE_URL = <?= json_encode(rtrim((string) (getenv('API_URL') ?: ''), '/'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
         const API_ENDPOINTS = {
-            generate: '/api/user/generate',
-            info: '/api/user/info',
-            heartbeat: '/api/user/heartbeat',
             csrfToken: '/api/auth/fetch_csrf_token.php'
         };
 
@@ -389,27 +399,26 @@
                 }
             });
 
-            // 先にテキストとして取得し、JSON以外のエラーページでもHTTPステータスを保持します。
-            const responseText = await response.text();
-            let responseData = null;
-            if (responseText) {
+            if (!response.ok) {
+                let errorMessage = `通信に失敗しました（HTTP ${response.status}）。`;
                 try {
-                    responseData = JSON.parse(responseText);
-                } catch (error) {
-                    if (!response.ok) {
-                        throw new Error(`通信に失敗しました（HTTP ${response.status}）。`);
+                    const errorData = await response.json();
+                    if (errorData && errorData.message) {
+                        errorMessage = errorData.message;
                     }
-                    throw new Error(`サーバーから正しいJSONレスポンスを受信できませんでした（HTTP ${response.status}）。`);
-                }
+                } catch (_) {}
+                throw new Error(errorMessage);
             }
 
-            if (!response.ok || responseData?.success === false) {
-                const message = responseData?.message;
-                throw new Error(message || `通信に失敗しました（HTTP ${response.status}）。`);
+            let responseData;
+            try {
+                responseData = await response.json();
+            } catch (error) {
+                throw new Error('サーバーから正しいJSONレスポンスを受信できませんでした。');
             }
 
-            if (responseData === null) {
-                throw new Error(`サーバーから空のレスポンスを受信しました（HTTP ${response.status}）。`);
+            if (responseData.success === false) {
+                throw new Error(responseData.message || '処理に失敗しました。');
             }
 
             return responseData.data ?? responseData;
@@ -572,6 +581,8 @@
                 userState.textContent = '未有効化';
                 document.getElementById('finishedNotice').classList.add('d-none');
             }
+
+            document.getElementById('copyTokenButton').disabled = !currentUserToken;
             renderHistory(userInfo.scores || []);
         }
 
@@ -653,13 +664,31 @@
         document.getElementById('refreshButton').addEventListener('click', async () => {
             const button = document.getElementById('refreshButton');
             setBusy(button, true, '更新中...');
+            if (!navigator.clipboard) {
+                showAlert('コピーできませんでした。トークンを選択してコピーしてください。', 'warning');
+                return;
+            }
+
             try {
-                await loadUserInfo();
-                showAlert('情報を更新しました。', 'success');
+                await navigator.clipboard.writeText(currentUserToken);
+                showAlert('トークンをコピーしました。', 'success');
             } catch (error) {
-                showAlert(error.message || '情報の更新に失敗しました。');
-            } finally {
+                showAlert('コピーできませんでした。トークンを選択してコピーしてください。', 'warning');
+            }finally {
                 setBusy(button, false);
+            }
+        });
+
+        document.getElementById('copyTokenButton').addEventListener('click', async () => {
+            if (!currentUserToken) {
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(currentUserToken);
+                showAlert('トークンをコピーしました。', 'success');
+            } catch (error) {
+                showAlert('コピーできませんでした。トークンを選択してコピーしてください。', 'warning');
             }
         });
 
