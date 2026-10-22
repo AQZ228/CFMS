@@ -1,6 +1,6 @@
-
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <!-- 基本設定 -->
     <meta charset="UTF-8">
@@ -27,11 +27,9 @@
     <meta property="og:image:alt" content="CFMS">
     <meta property="og:description" content="CFMSのユーザー再ログインページ">
 
-    <!-- Bootstrap CDN：外部CSSファイルは使用しない -->
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
+    <!-- bootstrap読み込み -->
+    <link rel="stylesheet" href="/lib/bootstrap-5.3.8-dist/css/bootstrap.min.css">
+    <script src="/lib/bootstrap-5.3.8-dist/js/bootstrap.bundle.min.js"></script>
 </head>
 
 <body class="bg-light">
@@ -65,8 +63,7 @@
                             id="statusArea"
                             class="mb-3"
                             role="status"
-                            aria-live="polite"
-                        ></div>
+                            aria-live="polite"></div>
 
                         <!-- JavaScriptで非同期送信するフォーム -->
                         <form id="loginForm" novalidate>
@@ -76,8 +73,7 @@
                                 type="hidden"
                                 id="csrfToken"
                                 name="csrf_token"
-                                value=""
-                            >
+                                value="">
 
                             <!-- ユーザーID：文字列として扱う -->
                             <div class="mb-3">
@@ -94,8 +90,7 @@
                                     placeholder="ユーザーIDを入力"
                                     autocomplete="username"
                                     maxlength="100"
-                                    required
-                                >
+                                    required>
 
                                 <div class="invalid-feedback">
                                     ユーザーIDを入力してください。
@@ -116,8 +111,7 @@
                                     name="passcode"
                                     placeholder="パスコードを入力"
                                     autocomplete="current-password"
-                                    required
-                                >
+                                    required>
 
                                 <div class="invalid-feedback">
                                     パスコードを入力してください。
@@ -129,8 +123,7 @@
                                 <button
                                     type="submit"
                                     class="btn btn-primary"
-                                    id="loginButton"
-                                >
+                                    id="loginButton">
                                     ログイン
                                 </button>
                             </div>
@@ -150,8 +143,6 @@
 
     <!-- JavaScript：ログイン処理 -->
     <script>
-        "use strict";
-
         // =====================================
         // DOM要素の取得
         // =====================================
@@ -417,11 +408,6 @@
 
     <!-- CSRFトークンの自動埋め込み -->
     <?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/fetch_csrf_token.php'; ?>
-
-    <!-- Bootstrap JavaScript CDN -->
-    <script
-        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-    ></script>
-
 </body>
+
 </html>
