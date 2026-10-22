@@ -367,7 +367,7 @@
             generate: '/api/user/generate',
             info: '/api/user/info',
             heartbeat: '/api/user/heartbeat',
-            csrfToken: '/components/fetch_csrf_token.php'
+            csrfToken: '/api/auth/fetch_csrf_token.php'
         };
 
         let csrfToken = '';
@@ -389,15 +389,27 @@
                 }
             });
 
-            let responseData;
-            try {
-                responseData = await response.json();
-            } catch (error) {
-                throw new Error('サーバーから正しいJSONレスポンスを受信できませんでした。');
+            // 先にテキストとして取得し、JSON以外のエラーページでもHTTPステータスを保持します。
+            const responseText = await response.text();
+            let responseData = null;
+            if (responseText) {
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch (error) {
+                    if (!response.ok) {
+                        throw new Error(`通信に失敗しました（HTTP ${response.status}）。`);
+                    }
+                    throw new Error(`サーバーから正しいJSONレスポンスを受信できませんでした（HTTP ${response.status}）。`);
+                }
             }
 
-            if (!response.ok || responseData.success === false) {
-                throw new Error(responseData.message || `通信に失敗しました（HTTP ${response.status}）。`);
+            if (!response.ok || responseData?.success === false) {
+                const message = responseData?.message;
+                throw new Error(message || `通信に失敗しました（HTTP ${response.status}）。`);
+            }
+
+            if (responseData === null) {
+                throw new Error(`サーバーから空のレスポンスを受信しました（HTTP ${response.status}）。`);
             }
 
             return responseData.data ?? responseData;
@@ -409,7 +421,7 @@
          */
         async function loadCsrfToken() {
             const tokenData = await requestApi(API_ENDPOINTS.csrfToken, {
-                method: 'GET',
+                method: 'POST',
                 headers: {}
             });
 
