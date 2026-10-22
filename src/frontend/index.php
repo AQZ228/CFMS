@@ -158,14 +158,9 @@
                 line-height: 1.5;
             }
 
-            #copyTokenButton,
             #generateButton,
             #refreshButton {
                 min-height: 44px;
-            }
-
-            #copyTokenButton {
-                width: 100%;
             }
 
             /* 詳細情報はラベルと値の間隔を詰めて読みやすく */
@@ -258,12 +253,7 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark navbar-cfms">
-        <div class="container page-container">
-            <a class="navbar-brand fw-bold" href="/index.php">CFMS</a>
-            <span class="navbar-text text-white">ユーザーメインページ</span>
-        </div>
-    </nav>
+
 
     <main class="container page-container py-4 py-md-5">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
@@ -325,9 +315,6 @@
                             </div>
                             <div class="small text-secondary mb-1">トークン</div>
                             <div id="userToken" class="token-value border rounded bg-light p-2 small">-</div>
-                            <button id="copyTokenButton" class="btn btn-outline-primary btn-sm mt-2" type="button">
-                                トークンをコピー
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -573,8 +560,6 @@
                 userState.textContent = '未有効化';
                 document.getElementById('finishedNotice').classList.add('d-none');
             }
-
-            document.getElementById('copyTokenButton').disabled = !currentUserToken;
             renderHistory(userInfo.scores || []);
         }
 
@@ -663,19 +648,6 @@
                 showAlert(error.message || '情報の更新に失敗しました。');
             } finally {
                 setBusy(button, false);
-            }
-        });
-
-        document.getElementById('copyTokenButton').addEventListener('click', async () => {
-            if (!currentUserToken) {
-                return;
-            }
-
-            try {
-                await navigator.clipboard.writeText(currentUserToken);
-                showAlert('トークンをコピーしました。', 'success');
-            } catch (error) {
-                showAlert('コピーできませんでした。トークンを選択してコピーしてください。', 'warning');
             }
         });
 
