@@ -1,39 +1,54 @@
 データ定義書メモ
 
-
-Users(利用者)
+Users（利用者）
 ------------------
-id PK
-name
-is_active
-finished_at(アカウントの終了時刻)
-created_at
+id PK（AUTO_INCREMENT）
+name（利用者名）
+token（QRコード用の固定・一意なトークン）
+passcode（再ログイン用パスコード、ハッシュ化して保存、未発行時はNULL）
+is_active（アクティベート状態）
+finished_at（アカウントの終了時刻、未終了時はNULL）
+last_heartbeat_at（最終Heartbeat受信時刻）
+created_at（アカウント作成日時）
 
 
-Staff(管理者とスタッフ)(Staffは複数形無し)
+Staff（管理者とスタッフ）（Staffは複数形無し）
 ------------------
-id PK
-name
-password(ハッシュ化する)
-role(列挙型で作成)
+id PK（AUTO_INCREMENT）
+name（スタッフ名）
+password（パスワード、ハッシュ化して保存）
+role（権限、列挙型で作成）
 
 
-Stores(店)
+Stores（店・ブース）
 ------------------
-id PK
-name
+id PK（AUTO_INCREMENT）
+name（店・ブース名）
 
 
-Scores
+StaffStores（スタッフと店舗の紐付け）
 ------------------
-id PK（履歴の主キー）
+staff_id PK, FK（スタッフID）
+store_id PK, FK（店舗ID）
+※複合主キー（staff_id, store_id）
+※スタッフと店舗の多対多関係を管理する
+
+
+Scores（得点履歴）
+------------------
+id PK（AUTO_INCREMENT、履歴の主キー）
 user_id FK（ポイントの持ち主）
-staff_id FK
-(そのポイントを記録した担当者のID。ユーザーの不正監視を目的とする)
-score
-store_id FK
-(どの店のポイントかを記録）
-created_at
-(時間を記録することで日ごとの集計が可能になる）
+staff_id FK（そのポイントを記録した担当者のID。ユーザーの不正監視を目的とする）
+score（1プレーで獲得した合計ポイント）
+store_id FK（どの店・ブースのポイントかを記録）
+created_at（得点登録日時。日ごとの集計に使用）
 
-
+【補足】
+・Scoresは1プレーにつき1レコードを登録する。
+・同一ユーザーの同一店舗での利用回数は、Scoresのレコード数を集計して求める。
+・利用回数上限は環境変数で管理し、初期値は3回とする。
+・ポイント付与数そのものに上限は設けない。
+・景品交換時はUsers.finished_atを更新し、以後の得点付与を禁止する。
+・パスワードとパスコードは平文で保存しない。
+・外部キーを設定し、過去の得点履歴との整合性を保つ。
+・スタッフと店舗の紐付けはStaffStoresで管理する。
