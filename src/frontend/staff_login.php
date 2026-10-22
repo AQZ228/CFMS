@@ -372,12 +372,21 @@
                 };
             }
 
-            try {
+           try {
+                const staff = JSON.parse(storedStaff);
+                if (!staff || typeof staff !== "object") {
+                    return {
+                        success: true,
+                        isLoggedIn: false,
+                        staff: null
+                    };
+                }
                 return {
                     success: true,
                     isLoggedIn: true,
-                    staff: JSON.parse(storedStaff)
+                    staff: staff
                 };
+            }
             } catch (error) {
                 // 保存データが壊れている場合は削除する
                 sessionStorage.removeItem(SESSION_KEY);
@@ -388,7 +397,7 @@
                     staff: null
                 };
             }
-        }
+        
 
         // ==============================
         // ログイン状態確認ボタン
