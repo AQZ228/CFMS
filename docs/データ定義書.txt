@@ -1,7 +1,7 @@
 データ定義書メモ
 
-Users（利用者）
-------------------
+## Users（利用者）
+
 id PK（AUTO_INCREMENT）
 name（利用者名）
 token（QRコード用の固定・一意なトークン）
@@ -11,44 +11,50 @@ finished_at（アカウントの終了時刻、未終了時はNULL）
 last_heartbeat_at（最終Heartbeat受信時刻）
 created_at（アカウント作成日時）
 
+## Staff（管理者とスタッフ）（Staffは複数形無し）
 
-Staff（管理者とスタッフ）（Staffは複数形無し）
-------------------
 id PK（AUTO_INCREMENT）
 name（スタッフ名）
 password（パスワード、ハッシュ化して保存）
 role（権限、列挙型で作成）
 
+## Stores（店・ブース）
 
-Stores（店・ブース）
-------------------
 id PK（AUTO_INCREMENT）
 name（店・ブース名）
 
+## StaffStores（スタッフと店舗の紐付け）
 
-StaffStores（スタッフと店舗の紐付け）
-------------------
 staff_id PK, FK（スタッフID）
 store_id PK, FK（店舗ID）
 ※複合主キー（staff_id, store_id）
 ※スタッフと店舗の多対多関係を管理する
 
+## Scores（得点履歴）
 
-Scores（得点履歴）
-------------------
 id PK（AUTO_INCREMENT、履歴の主キー）
 user_id FK（ポイントの持ち主）
-staff_id FK（そのポイントを記録した担当者のID。ユーザーの不正監視を目的とする）
+staff_id FK（そのポイントを記録した担当者のID。不正監視の参考にする）
 score（1プレーで獲得した合計ポイント）
 store_id FK（どの店・ブースのポイントかを記録）
 created_at（得点登録日時。日ごとの集計に使用）
+
+## Redemptions（景品交換履歴）
+
+id PK（AUTO_INCREMENT、景品交換履歴の主キー）
+user_id FK（景品交換の対象ユーザー）
+staff_id FK（景品交換を担当したスタッフ）
+created_at（景品交換日時）
 
 【補足】
 ・Scoresは1プレーにつき1レコードを登録する。
 ・同一ユーザーの同一店舗での利用回数は、Scoresのレコード数を集計して求める。
 ・利用回数上限は環境変数で管理し、初期値は3回とする。
 ・ポイント付与数そのものに上限は設けない。
-・景品交換時はUsers.finished_atを更新し、以後の得点付与を禁止する。
+・景品交換時はRedemptionsに履歴を登録し、Users.finished_atに終了日時を記録する。
+・Redemptionsへの登録とUsers.finished_atの更新は、同一トランザクションで実行する。
+・景品交換処理は、終了済みユーザーに対して二重登録されないようにする。
 ・パスワードとパスコードは平文で保存しない。
-・外部キーを設定し、過去の得点履歴との整合性を保つ。
+・外部キーを設定し、過去の得点履歴・景品交換履歴との整合性を保つ。
 ・スタッフと店舗の紐付けはStaffStoresで管理する。
+・スタッフやユーザーは、履歴の整合性を壊さないよう、原則として物理削除しない。
