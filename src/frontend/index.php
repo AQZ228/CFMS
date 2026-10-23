@@ -438,19 +438,20 @@
         async function initializePage() {
             try {
                 await loadUserInfo();
-                loadCsrfToken().then(async () => {
+                try {
+                    await loadCsrfToken();
                     if (!isFinished) {
                         await sendHeartbeat();
                         heartbeatTimer = window.setInterval(sendHeartbeat, 60 * 1000);
                     }
-                }).catch((error) => {
+                } catch (error) {
                     console.warn('CSRFトークンの取得に失敗したため、一部の機能が制限されます:', error.message);
-                });            } catch (error) {
+                }
+            } catch (error) {
                 showAlert(error.message || 'ページの初期化に失敗しました。');
                 document.getElementById('accountStatus').textContent = '取得失敗';
             }
         }
-
         document.getElementById('generateButton').addEventListener('click', generateUser);
         document.getElementById('refreshButton').addEventListener('click', async () => {
             const button = document.getElementById('refreshButton');
