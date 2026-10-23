@@ -162,13 +162,14 @@
          * APIレスポンスの共通形式 { success, message, data } を処理します。
          */
         async function requestApi(endpoint, options = {}) {
+            const headers = { ...(options.headers || {}) };
+            if (options.body) {
+                headers['Content-Type'] = 'application/json';
+            }
             const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                 credentials: 'include',
                 ...options,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(options.headers || {})
-                }
+                headers
             });
 
             // 先にテキストとして取得し、JSON以外のエラーページでもHTTPステータスを保持します。
@@ -191,11 +192,13 @@
             }
 
             if (responseData === null) {
+                if (response.status === 204) {
+                    return null;
+                }
                 throw new Error(`サーバーから空のレスポンスを受信しました（HTTP ${response.status}）。`);
             }
 
-            return responseData.data ?? responseData;
-        }
+            return responseData.data ?? responseData;        }
 
         /**
          * CommentAnchor: CSRF_TOKEN
@@ -288,14 +291,14 @@
             }
 
             // 新しい履歴を先に表示します。
-            [...scores].sort((first, second) => {
-                const t1 = first.createdAt ? new Date(first.createdAt).getTime() : 0;
-                const t2 = second.createdAt ? new Date(second.createdAt).getTime() : 0;
-                const time1 = Number.isNaN(t1) ? 0 : t1;
-                const time2 = Number.isNaN(t2) ? 0 : t2;
-                return time2 - time1;
-            }).forEach((score) => {
-                const row = document.createElement('tr');
+            const parseDate = (val) => {
+                if (!val) return 0;
+                const normalized = typeof val === 'string' ? val.replace(' ', 'T') : val;
+                const t = new Date(normalized).getTime();
+                return Number.isNaN(t) ? 0 : t;
+            };
+
+            [...scores].sort((first, second) => parseDate(second.createdAt) - parseDate(first.createdAt)).forEach((score) => {                const row = document.createElement('tr');
                 const dateCell = document.createElement('td');
                 dateCell.textContent = formatDate(score.createdAt);
                 dateCell.setAttribute('data-label', '日時');
@@ -397,6 +400,10 @@
          * ユーザー情報を発行します。重複発行の防止はサーバー側でも必須です。
          */
         async function generateUser() {
+            if (!csrfToken) {
+                showAlert('CSRFトークンが取得できていないため、ユーザー情報を発行できません。ページを再読み込みしてください。');
+                return;
+            }
             const button = document.getElementById('generateButton');
             setBusy(button, true);
 
