@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -23,7 +22,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://nkc.sanae.dev">
     <meta property="og:image" content="/images/CFMS.png">
-    <meta property="og:image:alt" content="CFMS">
+    <meta property="og:image:alt" content="">
     <meta property="og:description" content="QRコードからユーザーを確認して得点を登録します">
 
     <title>得点登録ページ</title>
@@ -66,16 +65,12 @@
                     担当店舗 *
                 </label>
 
-                <select id="storeId" class="form-select" required>
-                    <option value="">店舗を選択してください</option>
-                    <option value="1">店舗A（モック）</option>
-                    <option value="2">店舗B（モック）</option>
+                <select id="storeId" class="form-select" required disabled>
+                    <option value="">店舗一覧を読み込んでいます...</option>
                 </select>
 
                 <div class="form-text">
-                    現在はモックの店舗一覧です。
-                    実際の運用では、ログイン中スタッフの権限に基づいて
-                    サーバーから取得してください。
+                    APIから取得した店舗一覧から選択してください。
                 </div>
             </section>
 
@@ -128,6 +123,7 @@
 
                         <input
                             type="hidden"
+                            class="csrf_token"
                             name="csrf_token"
                             value="">
 
@@ -207,9 +203,7 @@
 
                             <tbody id="scoreHistory">
                                 <tr>
-                                    <td
-                                        colspan="3"
-                                        class="text-center text-secondary">
+                                    <td colspan="3" class="text-center text-secondary">
                                         履歴はありません
                                     </td>
                                 </tr>
@@ -231,6 +225,7 @@
 
                         <input
                             type="hidden"
+                            class="csrf_token"
                             name="csrf_token"
                             value="">
 
@@ -342,6 +337,23 @@
     // メッセージ表示
     // ----------------------------------------
 
+    function renderResult(data) {
+        messageArea.textContent =
+            data.message || (
+                data.success
+                    ? '処理が完了しました。'
+                    : '処理に失敗しました。'
+            );
+
+        messageArea.className = data.success
+            ? 'alert alert-success'
+            : 'alert alert-danger';
+
+        if (data.data) {
+            console.log('サーバーからのデータ:', data.data);
+        }
+    }
+
     function showMessage(message, type = 'info') {
         messageArea.textContent = message;
         messageArea.className = `alert alert-${type}`;
@@ -357,39 +369,147 @@
     // ----------------------------------------
 
     function getCsrfToken() {
-        const meta = document.querySelector(
-            'meta[name="csrf-token"]'
-        );
-
-        if (meta && meta.content.trim() !== '') {
-            return meta.content.trim();
-        }
-
-        const input = document.querySelector(
-            'input[name="csrf_token"]'
-        );
+        const input = document.querySelector('.csrf_token');
 
         if (input && input.value.trim() !== '') {
             return input.value.trim();
+        }
+
+        const meta = document.querySelector('meta[name="csrf-token"]');
+
+        if (meta && meta.content.trim() !== '') {
+            return meta.content.trim();
         }
 
         return '';
     }
 
     // ----------------------------------------
-    // APIリクエスト用CSRFチェック
+    // API通信
+    // 指定されたfetch形式を使用
     // ----------------------------------------
 
-    function requireCsrfToken() {
-        const csrfToken = getCsrfToken();
+    function callApi(requestData) {
+        const csrf_token = getCsrfToken();
 
-        if (!csrfToken) {
+        return fetch('<?= getenv('API_URL') ?>/template/template.php', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ...requestData,
+                csrf_token
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            renderResult(data);
+            return data;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            throw error;
+        });
+    }
+
+    // ----------------------------------------
+    // APIレスポンス確認
+    // ----------------------------------------
+
+    function checkResponse(data) {
+        if (!data || data.success !== true) {
             throw new Error(
-                'CSRFトークンを取得できません。ページを再読み込みしてください。'
+                data?.message || '処理に失敗しました。'
             );
         }
 
-        return csrfToken;
+        return data;
+    }
+
+    // ----------------------------------------
+    // 店舗一覧取得
+    // GET /api/admin/stores
+    // ----------------------------------------
+
+    function loadStores() {
+        storeSelect.disabled = true;
+        storeSelect.replaceChildren();
+
+        const loadingOption = document.createElement('option');
+        loadingOption.value = '';
+        loadingOption.textContent = '店舗一覧を読み込んでいます...';
+        storeSelect.appendChild(loadingOption);
+
+        fetch('/api/admin/stores', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('店舗一覧の取得に失敗しました。');
+            }
+
+            return response.json();
+        })
+        .then(data => {
+            if (data.success !== true) {
+                throw new Error(
+                    data.message || '店舗一覧の取得に失敗しました。'
+                );
+            }
+
+            const stores = data.stores;
+
+            storeSelect.replaceChildren();
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = '店舗を選択してください';
+            storeSelect.appendChild(defaultOption);
+
+            if (!Array.isArray(stores) || stores.length === 0) {
+                const emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.textContent = '登録されている店舗がありません';
+                emptyOption.disabled = true;
+                storeSelect.appendChild(emptyOption);
+                storeSelect.disabled = true;
+                return;
+            }
+
+            stores.forEach(store => {
+                const option = document.createElement('option');
+
+                option.value = String(store.id);
+                option.textContent = store.name;
+
+                storeSelect.appendChild(option);
+            });
+
+            storeSelect.disabled = false;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+
+            storeSelect.replaceChildren();
+
+            const errorOption = document.createElement('option');
+            errorOption.value = '';
+            errorOption.textContent = '店舗一覧を取得できませんでした';
+
+            storeSelect.appendChild(errorOption);
+            storeSelect.disabled = true;
+
+            showMessage(
+                '店舗一覧を取得できませんでした。ページを再読み込みしてください。',
+                'danger'
+            );
+        });
     }
 
     // ----------------------------------------
@@ -407,31 +527,6 @@
         scoreHistory.replaceChildren();
 
         registerButton.disabled = true;
-    }
-
-    // ----------------------------------------
-    // APIレスポンス確認
-    // ----------------------------------------
-
-    async function readResponse(response) {
-        let data;
-
-        try {
-            data = await response.json();
-        } catch {
-            throw new Error(
-                'サーバーから正しいJSON応答がありません。'
-            );
-        }
-
-        if (!response.ok || data.success !== true) {
-            throw new Error(
-                data.message ||
-                `通信エラーが発生しました（${response.status}）。`
-            );
-        }
-
-        return data;
     }
 
     // ----------------------------------------
@@ -455,7 +550,7 @@
             return;
         }
 
-        scores.forEach((item) => {
+        scores.forEach(item => {
             const tr = document.createElement('tr');
 
             const dateCell = document.createElement('td');
@@ -511,16 +606,13 @@
 
         if (isEnded) {
             statusElement.textContent = '終了済み';
-            statusElement.className =
-                'col-6 text-danger fw-bold';
+            statusElement.className = 'col-6 text-danger fw-bold';
         } else if (isActive) {
             statusElement.textContent = '有効';
-            statusElement.className =
-                'col-6 text-success fw-bold';
+            statusElement.className = 'col-6 text-success fw-bold';
         } else {
             statusElement.textContent = '未アクティベート';
-            statusElement.className =
-                'col-6 text-danger fw-bold';
+            statusElement.className = 'col-6 text-danger fw-bold';
         }
 
         document.getElementById('totalScore').textContent =
@@ -580,7 +672,6 @@
 
     // ----------------------------------------
     // ユーザー情報取得
-    // POST /api/score/get
     // ----------------------------------------
 
     async function getUserInfo(token) {
@@ -592,18 +683,12 @@
         const trimmedToken = token.trim();
 
         if (!storeId) {
-            showMessage(
-                '担当店舗を選択してください。',
-                'warning'
-            );
+            showMessage('担当店舗を選択してください。', 'warning');
             return;
         }
 
         if (!trimmedToken) {
-            showMessage(
-                'QRコードのtokenを入力してください。',
-                'warning'
-            );
+            showMessage('QRコードのtokenを入力してください。', 'warning');
             return;
         }
 
@@ -613,33 +698,18 @@
         hideUser();
 
         try {
-            const csrfToken = requireCsrfToken();
-
-            const response = await fetch('/api/score/get', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: JSON.stringify({
-                    token: trimmedToken,
-                    storeId: storeId,
-                    csrfToken: csrfToken
-                })
+            const data = await callApi({
+                action: 'get_user',
+                token: trimmedToken,
+                storeId: storeId
             });
 
-            const data = await readResponse(response);
+            checkResponse(data);
 
             currentToken = trimmedToken;
-
             displayUser(data);
 
-            showMessage(
-                'ユーザー情報を取得しました。',
-                'success'
-            );
+            showMessage('ユーザー情報を取得しました。', 'success');
 
         } catch (error) {
             hideUser();
@@ -659,26 +729,22 @@
     // 手入力フォーム送信
     // ----------------------------------------
 
-    getUserForm.addEventListener('submit', async (event) => {
+    getUserForm.addEventListener('submit', function(event) {
         event.preventDefault();
-
-        await getUserInfo(tokenInput.value);
+        getUserInfo(tokenInput.value);
     });
 
     // ----------------------------------------
     // QRコード読み取りライブラリ起動
     // ----------------------------------------
 
-    startCameraButton.addEventListener('click', async () => {
+    startCameraButton.addEventListener('click', async function() {
         if (cameraRunning) {
             return;
         }
 
         if (!storeSelect.value) {
-            showMessage(
-                '先に担当店舗を選択してください。',
-                'warning'
-            );
+            showMessage('先に担当店舗を選択してください。', 'warning');
             return;
         }
 
@@ -692,10 +758,7 @@
 
         startCameraButton.disabled = true;
 
-        setCameraStatus(
-            'カメラを起動しています...',
-            'info'
-        );
+        setCameraStatus('カメラを起動しています...', 'info');
 
         try {
             if (!html5QrCode) {
@@ -713,7 +776,7 @@
                         height: 250
                     }
                 },
-                async (decodedText) => {
+                async function(decodedText) {
                     if (processingQr || loadingUser) {
                         return;
                     }
@@ -739,14 +802,13 @@
                         );
 
                         await stopQrCamera();
-
                         await getUserInfo(scannedToken);
 
                     } finally {
                         processingQr = false;
                     }
                 },
-                () => {
+                function() {
                     // QRコード未検出時は読み取りを続ける
                 }
             );
@@ -781,21 +843,17 @@
     // カメラ停止ボタン
     // ----------------------------------------
 
-    stopCameraButton.addEventListener('click', async () => {
+    stopCameraButton.addEventListener('click', async function() {
         await stopQrCamera();
 
-        setCameraStatus(
-            'カメラを停止しました。',
-            'secondary'
-        );
+        setCameraStatus('カメラを停止しました。', 'secondary');
     });
 
     // ----------------------------------------
     // 得点登録
-    // POST /api/score/add
     // ----------------------------------------
 
-    scoreForm.addEventListener('submit', async (event) => {
+    scoreForm.addEventListener('submit', function(event) {
         event.preventDefault();
 
         if (registeringScore) {
@@ -834,65 +892,50 @@
         }
 
         if (!storeSelect.value) {
-            showMessage(
-                '担当店舗を選択してください。',
-                'warning'
-            );
+            showMessage('担当店舗を選択してください。', 'warning');
             return;
         }
 
         registeringScore = true;
         registerButton.disabled = true;
 
-        try {
-            const csrfToken = requireCsrfToken();
-
-            const response = await fetch('/api/score/add', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: JSON.stringify({
-                    token: currentToken,
-                    storeId: storeSelect.value,
-                    score: score,
-                    csrfToken: csrfToken
-                })
-            });
-
-            const data = await readResponse(response);
+        callApi({
+            action: 'register_score',
+            token: currentToken,
+            storeId: storeSelect.value,
+            score: score
+        })
+        .then(data => {
+            checkResponse(data);
 
             showMessage(
                 data.message || '得点を登録しました。',
                 'success'
             );
 
-            // 登録後、最新の情報を再取得する
-            await getUserInfo(currentToken);
+            scoreInput.value = '';
 
-        } catch (error) {
+            return getUserInfo(currentToken);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+
             showMessage(
                 error.message || '得点の登録に失敗しました。',
                 'danger'
             );
-
-        } finally {
+        })
+        .finally(() => {
             registeringScore = false;
-
-            // 最新のAPI判定に基づいて登録ボタンを制御
-            registerButton.disabled =
-                !currentUser || !canAddScore;
-        }
+            registerButton.disabled = !currentUser || !canAddScore;
+        });
     });
 
     // ----------------------------------------
     // 店舗変更時
     // ----------------------------------------
 
-    storeSelect.addEventListener('change', async () => {
+    storeSelect.addEventListener('change', async function() {
         await stopQrCamera();
 
         hideUser();
@@ -910,13 +953,19 @@
     // ページ離脱時にカメラを停止
     // ----------------------------------------
 
-    window.addEventListener('pagehide', () => {
+    window.addEventListener('pagehide', function() {
         if (html5QrCode && cameraRunning) {
-            html5QrCode.stop().catch((error) => {
+            html5QrCode.stop().catch(function(error) {
                 console.error('カメラ停止エラー:', error);
             });
         }
     });
+
+    // ----------------------------------------
+    // 初期表示
+    // ----------------------------------------
+
+    loadStores();
 
 })();
 </script>
