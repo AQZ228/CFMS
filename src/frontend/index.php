@@ -145,7 +145,7 @@
         (() => {
         // CommentAnchor: API_SETTINGS
         // API_URLは環境変数で設定します。未設定の場合は同一オリジンを使用します。
-        const API_BASE_URL = <?= json_encode(rtrim((string) (getenv('API_URL') ?: ''), '/'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        const API_BASE_URL = <?= json_encode(rtrim((string) (getenv('API_URL') ?: ''), '/'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
         const API_ENDPOINTS = {
             generate: '/api/user/generate',
             info: '/api/user/info',
@@ -162,14 +162,13 @@
          * APIレスポンスの共通形式 { success, message, data } を処理します。
          */
         async function requestApi(endpoint, options = {}) {
-            const headers = { ...(options.headers || {}) };
-            if (options.body) {
-                headers['Content-Type'] = 'application/json';
-            }
             const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                 credentials: 'include',
                 ...options,
-                headers
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                }
             });
 
             // 先にテキストとして取得し、JSON以外のエラーページでもHTTPステータスを保持します。
@@ -192,20 +191,19 @@
             }
 
             if (responseData === null) {
-                if (response.status === 204) {
-                    return null;
-                }
                 throw new Error(`サーバーから空のレスポンスを受信しました（HTTP ${response.status}）。`);
             }
 
-            return responseData.data ?? responseData;        }
+            return responseData.data ?? responseData;
+        }
 
         /**
          * CommentAnchor: CSRF_TOKEN
          * template.phpと同じ方式で、fetch_csrf_token.phpが埋め込むhiddenフィールドから取得します。
          * CSRF取得用コンポーネントはこのスクリプトより前にincludeし、初期化時に値を読み取ります。
          */
-                async function loadCsrfToken() {
+        async function loadCsrfToken() {
+            // コンポーネント側がDOMContentLoadedで値を埋め込む実装にも対応します。
             if (document.readyState === 'loading') {
                 await new Promise((resolve) => {
                     document.addEventListener('DOMContentLoaded', resolve, { once: true });
@@ -213,18 +211,7 @@
             }
 
             const csrfInput = document.querySelector('.csrf_token');
-            if (!csrfInput) {
-                throw new Error('CSRFトークン用の要素が見つかりません。');
-            }
-
-            // 非同期でのトークン注入を最大5秒間待機します
-            let attempts = 0;
-            while (!csrfInput.value.trim() && attempts < 50) {
-                await new Promise((resolve) => setTimeout(resolve, 100));
-                attempts++;
-            }
-
-            csrfToken = csrfInput.value.trim();
+            csrfToken = csrfInput?.value?.trim() || '';
             if (!csrfToken) {
                 throw new Error('CSRFトークンを取得できませんでした。fetch_csrf_token.phpの埋め込み処理を確認してください。');
             }
@@ -291,14 +278,11 @@
             }
 
             // 新しい履歴を先に表示します。
-            const parseDate = (val) => {
-                if (!val) return 0;
-                const normalized = typeof val === 'string' ? val.replace(' ', 'T') : val;
-                const t = new Date(normalized).getTime();
-                return Number.isNaN(t) ? 0 : t;
-            };
+            [...scores].sort((first, second) => {
+                return new Date(second.createdAt) - new Date(first.createdAt);
+            }).forEach((score) => {
+                const row = document.createElement('tr');
 
-            [...scores].sort((first, second) => parseDate(second.createdAt) - parseDate(first.createdAt)).forEach((score) => {                const row = document.createElement('tr');
                 const dateCell = document.createElement('td');
                 dateCell.textContent = formatDate(score.createdAt);
                 dateCell.setAttribute('data-label', '日時');
@@ -314,7 +298,8 @@
 
                 row.append(dateCell, storeCell, pointCell);
                 scoreHistory.appendChild(row);
-            });        }
+            });
+        }
 
         function renderQrCode(token) {
             const qrCode = document.getElementById('qrCode');
@@ -400,10 +385,6 @@
          * ユーザー情報を発行します。重複発行の防止はサーバー側でも必須です。
          */
         async function generateUser() {
-            if (!csrfToken) {
-                showAlert('CSRFトークンが取得できていないため、ユーザー情報を発行できません。ページを再読み込みしてください。');
-                return;
-            }
             const button = document.getElementById('generateButton');
             setBusy(button, true);
 
@@ -444,21 +425,16 @@
 
         async function initializePage() {
             try {
+                await loadCsrfToken();
                 await loadUserInfo();
-                try {
-                    await loadCsrfToken();
-                    if (!isFinished) {
-                        await sendHeartbeat();
-                        heartbeatTimer = window.setInterval(sendHeartbeat, 60 * 1000);
-                    }
-                } catch (error) {
-                    console.warn('CSRFトークンの取得に失敗したため、一部の機能が制限されます:', error.message);
-                }
+                await sendHeartbeat();
+                heartbeatTimer = window.setInterval(sendHeartbeat, 60 * 1000);
             } catch (error) {
                 showAlert(error.message || 'ページの初期化に失敗しました。');
                 document.getElementById('accountStatus').textContent = '取得失敗';
             }
         }
+
         document.getElementById('generateButton').addEventListener('click', generateUser);
         document.getElementById('refreshButton').addEventListener('click', async () => {
             const button = document.getElementById('refreshButton');
