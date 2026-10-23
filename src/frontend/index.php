@@ -202,8 +202,7 @@
          * template.phpと同じ方式で、fetch_csrf_token.phpが埋め込むhiddenフィールドから取得します。
          * CSRF取得用コンポーネントはこのスクリプトより前にincludeし、初期化時に値を読み取ります。
          */
-        async function loadCsrfToken() {
-            // コンポーネント側がDOMContentLoadedで値を埋め込む実装にも対応します。
+                async function loadCsrfToken() {
             if (document.readyState === 'loading') {
                 await new Promise((resolve) => {
                     document.addEventListener('DOMContentLoaded', resolve, { once: true });
@@ -211,7 +210,18 @@
             }
 
             const csrfInput = document.querySelector('.csrf_token');
-            csrfToken = csrfInput?.value?.trim() || '';
+            if (!csrfInput) {
+                throw new Error('CSRFトークン用の要素が見つかりません。');
+            }
+
+            // 非同期でのトークン注入を最大5秒間待機します
+            let attempts = 0;
+            while (!csrfInput.value.trim() && attempts < 50) {
+                await new Promise((resolve) => setTimeout(resolve, 100));
+                attempts++;
+            }
+
+            csrfToken = csrfInput.value.trim();
             if (!csrfToken) {
                 throw new Error('CSRFトークンを取得できませんでした。fetch_csrf_token.phpの埋め込み処理を確認してください。');
             }
