@@ -67,14 +67,14 @@
                                 ログイン中の管理者情報
                             </h2>
 
-                            <p class="mb-1">
+                                                       <p class="mb-1">
                                 <span class="text-secondary">管理者名：</span>
-                                <strong>山田 花子</strong>
+                                <strong><?= htmlspecialchars($adminName ?? '未設定', ENT_QUOTES, 'UTF-8') ?></strong>
                             </p>
 
                             <p class="mb-0">
                                 <span class="text-secondary">管理者ID：</span>
-                                <strong>AD-0001</strong>
+                                <strong><?= htmlspecialchars($adminId ?? '未設定', ENT_QUOTES, 'UTF-8') ?></strong>
                             </p>
                         </div>
 
@@ -273,7 +273,6 @@
             if (!shouldLogout) {
                 return;
             }
-
             alert('ログアウトAPIはまだ接続されていません。');
         });
     </script>
