@@ -1,6 +1,6 @@
-
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <!-- 基本設定 -->
     <meta charset="UTF-8">
@@ -27,7 +27,8 @@
     <meta property="og:image:alt" content="CFMS">
     <meta property="og:description" content="CFMSの管理者・スタッフ専用ログインページ">
 
-     <link rel="stylesheet" href="/lib/bootstrap-5.3.8-dist/css/bootstrap.min.css">
+    <!-- bootstrap読み込み -->
+    <link rel="stylesheet" href="/lib/bootstrap-5.3.8-dist/css/bootstrap.min.css">
     <script src="/lib/bootstrap-5.3.8-dist/js/bootstrap.bundle.min.js"></script>
 </head>
 
@@ -62,8 +63,7 @@
                             id="statusArea"
                             class="mb-3"
                             role="status"
-                            aria-live="polite"
-                        ></div>
+                            aria-live="polite"></div>
 
                         <!-- 通常送信を行わず、JavaScriptで処理する -->
                         <form id="loginForm" novalidate>
@@ -73,8 +73,7 @@
                                 type="hidden"
                                 id="csrfToken"
                                 name="csrf_token"
-                                value=""
-                            >
+                                value="">
 
                             <!-- スタッフID -->
                             <div class="mb-3">
@@ -91,8 +90,7 @@
                                     placeholder="スタッフIDを入力"
                                     autocomplete="username"
                                     maxlength="100"
-                                    required
-                                >
+                                    required>
 
                                 <div class="invalid-feedback">
                                     スタッフIDを入力してください。
@@ -113,8 +111,7 @@
                                     name="password"
                                     placeholder="パスワードを入力"
                                     autocomplete="current-password"
-                                    required
-                                >
+                                    required>
 
                                 <div class="invalid-feedback">
                                     パスワードを入力してください。
@@ -126,13 +123,11 @@
                                 <input
                                     type="checkbox"
                                     class="form-check-input"
-                                    id="showPassword"
-                                >
+                                    id="showPassword">
 
                                 <label
                                     class="form-check-label"
-                                    for="showPassword"
-                                >
+                                    for="showPassword">
                                     パスワードを表示する
                                 </label>
                             </div>
@@ -142,8 +137,7 @@
                                 <button
                                     type="submit"
                                     class="btn btn-primary"
-                                    id="loginButton"
-                                >
+                                    id="loginButton">
                                     ログイン
                                 </button>
                             </div>
@@ -155,8 +149,7 @@
                             <button
                                 type="button"
                                 class="btn btn-link text-decoration-none"
-                                id="checkSessionButton"
-                            >
+                                id="checkSessionButton">
                                 ログイン状態を確認
                             </button>
                         </div>
@@ -449,11 +442,6 @@
 
     <!-- CSRFトークンの自動埋め込み -->
     <?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/fetch_csrf_token.php'; ?>
-
-    <!-- BootstrapのJavaScript -->
-    <script
-        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-    ></script>
-
 </body>
+
 </html>
