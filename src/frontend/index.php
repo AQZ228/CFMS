@@ -289,10 +289,12 @@
 
             // 新しい履歴を先に表示します。
             [...scores].sort((first, second) => {
-                return new Date(second.createdAt) - new Date(first.createdAt);
+                const t1 = first.createdAt ? new Date(first.createdAt).getTime() : 0;
+                const t2 = second.createdAt ? new Date(second.createdAt).getTime() : 0;
+                const time1 = Number.isNaN(t1) ? 0 : t1;
+                const time2 = Number.isNaN(t2) ? 0 : t2;
+                return time2 - time1;
             }).forEach((score) => {
-                const row = document.createElement('tr');
-
                 const dateCell = document.createElement('td');
                 dateCell.textContent = formatDate(score.createdAt);
                 dateCell.setAttribute('data-label', '日時');
@@ -435,11 +437,15 @@
 
         async function initializePage() {
             try {
-                await loadCsrfToken();
                 await loadUserInfo();
-                await sendHeartbeat();
-                heartbeatTimer = window.setInterval(sendHeartbeat, 60 * 1000);
-            } catch (error) {
+                loadCsrfToken().then(async () => {
+                    if (!isFinished) {
+                        await sendHeartbeat();
+                        heartbeatTimer = window.setInterval(sendHeartbeat, 60 * 1000);
+                    }
+                }).catch((error) => {
+                    console.warn('CSRFトークンの取得に失敗したため、一部の機能が制限されます:', error.message);
+                });            } catch (error) {
                 showAlert(error.message || 'ページの初期化に失敗しました。');
                 document.getElementById('accountStatus').textContent = '取得失敗';
             }
