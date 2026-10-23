@@ -145,7 +145,7 @@
         (() => {
         // CommentAnchor: API_SETTINGS
         // API_URLは環境変数で設定します。未設定の場合は同一オリジンを使用します。
-        const API_BASE_URL = <?= json_encode(rtrim((string) (getenv('API_URL') ?: ''), '/'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+        const API_BASE_URL = <?= json_encode(rtrim((string) (getenv('API_URL') ?: ''), '/'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         const API_ENDPOINTS = {
             generate: '/api/user/generate',
             info: '/api/user/info',
