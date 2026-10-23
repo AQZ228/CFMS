@@ -27,11 +27,8 @@
     <meta property="og:image:alt" content="CFMS">
     <meta property="og:description" content="CFMSの管理者・スタッフ専用ログインページ">
 
-    <!-- Bootstrap CDN：外部CSSファイルは使用しない -->
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
+     <link rel="stylesheet" href="/lib/bootstrap-5.3.8-dist/css/bootstrap.min.css">
+    <script src="/lib/bootstrap-5.3.8-dist/js/bootstrap.bundle.min.js"></script>
 </head>
 
 <body class="bg-light">
