@@ -182,8 +182,8 @@
         </div>
     </main>
 
-    <?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/footer.php'; ?>
-    <?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/fetch_csrf_token.php'; ?>
+    <?php include_once __DIR__ . '/components/footer.php'; ?>
+    <?php include_once __DIR__ . '/components/fetch_csrf_token.php'; ?>
 
     <script src="/lib/bootstrap-5.3.8-dist/js/bootstrap.bundle.min.js"></script>
 
