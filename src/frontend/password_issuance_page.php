@@ -115,8 +115,8 @@
                         発行されたパスコード（ダミー）
                     </label>
 
-                    <div id="passcode-value" class="passcode-display">
-                    </div>
+                    <output id="passcode-value" class="passcode-display">
+                    </output>
 
                     <button type="button"
                             id="copy-passcode-button"
