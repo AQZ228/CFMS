@@ -5,15 +5,15 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <meta name="author" content="乙成隼士,松本浩成,永島愛貴,塩川海響,星川誠弥,中島悠翔">
+    <meta name="keywords" content="nkc,名古屋工学院専門学校,文化祭">
 
     <link rel="icon" href="/images/CFMS.ico" sizes="any">
     <link rel="icon" href="/images/CFMS.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/images/CFMS.png">
 
-    <meta name="keywords" content="nkc,名古屋工学院専門学校,文化祭">
     <meta property="og:title" content="集計分析ページ | CFMS">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://nkc.sanae.dev">
@@ -49,13 +49,17 @@
                         集計データを更新
                     </button>
 
-                    <a href="/staff/staff_main_page.php" class="btn btn-outline-secondary">
+                    <a href="/staff/staff_main.php" class="btn btn-outline-secondary">
                         管理メニューへ戻る
                     </a>
                 </div>
             </div>
 
-            
+            <!-- CommentAnchor: 通知メッセージ -->
+            <div id="statusMessage"
+                 class="alert d-none"
+                 role="status"
+                 aria-live="polite"></div>
 
             <!-- CommentAnchor: ユーザー集計 -->
             <section class="mb-4" aria-labelledby="userStatisticsTitle">
@@ -213,7 +217,7 @@
                 </div>
             </section>
 
-            <!-- CommentAnchor: 最終更新日時 -->
+            <!-- CommentAnchor: 最終取得日時 -->
             <p class="small text-secondary text-end mb-0">
                 最終取得日時：
                 <span id="lastUpdated">未取得</span>
@@ -227,6 +231,7 @@
         const STATISTICS_API_URL = '/api/admin/statistics';
         const EXPORT_API_URL = '/api/admin/export';
 
+        // CommentAnchor: HTML要素を取得
         const statusMessage = document.getElementById('statusMessage');
         const refreshButton = document.getElementById('refreshButton');
         const exportForm = document.getElementById('exportForm');
@@ -234,19 +239,34 @@
 
         // CommentAnchor: 通知メッセージを表示
         function showStatus(message, type) {
+            if (!statusMessage) {
+                console.error('HTMLに statusMessage がありません。');
+                return;
+            }
+
             statusMessage.className = `alert alert-${type}`;
             statusMessage.textContent = message;
         }
 
         // CommentAnchor: 通知メッセージを非表示
         function hideStatus() {
+            if (!statusMessage) {
+                console.error('HTMLに statusMessage がありません。');
+                return;
+            }
+
             statusMessage.className = 'alert d-none';
             statusMessage.textContent = '';
         }
 
-        // CommentAnchor: ユーザー数を表示
+        // CommentAnchor: 数値を表示
         function displayCount(elementId, value) {
             const element = document.getElementById(elementId);
+
+            if (!element) {
+                console.error(`HTMLに ${elementId} がありません。`);
+                return;
+            }
 
             if (value === null || value === undefined || value === '') {
                 element.textContent = 'データがありません';
@@ -266,6 +286,12 @@
         // CommentAnchor: ランキング表を表示
         function renderRanking(tbodyId, ranking, nameKey, valueKey, valueLabel) {
             const tbody = document.getElementById(tbodyId);
+
+            if (!tbody) {
+                console.error(`HTMLに ${tbodyId} がありません。`);
+                return;
+            }
+
             tbody.replaceChildren();
 
             if (!Array.isArray(ranking) || ranking.length === 0) {
@@ -289,12 +315,12 @@
                 rankCell.textContent = `${index + 1}位`;
 
                 const nameCell = document.createElement('td');
+                const name = item[nameKey];
+
                 nameCell.textContent =
-                    item[nameKey] === null ||
-                    item[nameKey] === undefined ||
-                    item[nameKey] === ''
+                    name === null || name === undefined || name === ''
                         ? 'データがありません'
-                        : String(item[nameKey]);
+                        : String(name);
 
                 const valueCell = document.createElement('td');
                 valueCell.className = 'text-end fw-bold';
@@ -319,7 +345,7 @@
             });
         }
 
-        // CommentAnchor: APIからJSONを取得する共通処理
+        // CommentAnchor: JSON形式のAPIレスポンスを取得
         async function fetchJson(url) {
             const response = await fetch(url, {
                 method: 'GET',
@@ -330,7 +356,6 @@
             });
 
             const responseText = await response.text();
-
             let data;
 
             try {
@@ -350,10 +375,13 @@
         // CommentAnchor: 集計データを取得
         async function loadStatistics() {
             hideStatus();
-            refreshButton.disabled = true;
-            refreshButton.textContent = '読み込み中...';
 
-            // 取得前はデータがない状態にする
+            if (refreshButton) {
+                refreshButton.disabled = true;
+                refreshButton.textContent = '読み込み中...';
+            }
+
+            // CommentAnchor: 取得開始時はデータなしで初期化
             displayCount('totalUsers', null);
             displayCount('activeUsers', null);
             displayCount('finishedUsers', null);
@@ -361,7 +389,11 @@
             renderRanking('recentUserRankingBody', [], 'userName', 'useCount', '回');
             renderRanking('storeUserRankingBody', [], 'storeName', 'userCount', '人');
 
-            document.getElementById('lastUpdated').textContent = '未取得';
+            const lastUpdated = document.getElementById('lastUpdated');
+
+            if (lastUpdated) {
+                lastUpdated.textContent = '未取得';
+            }
 
             try {
                 const data = await fetchJson(STATISTICS_API_URL);
@@ -370,7 +402,7 @@
                 displayCount('activeUsers', data.activeUsers);
                 displayCount('finishedUsers', data.finishedUsers);
 
-                // 直近3日間の利用者ランキング
+                // CommentAnchor: 直近3日間の利用者ランキング
                 const recentUserRanking = Array.isArray(data.recentUserRanking)
                     ? [...data.recentUserRanking]
                     : [];
@@ -387,7 +419,7 @@
                     '回'
                 );
 
-                // 店舗別利用者数ランキング
+                // CommentAnchor: 店舗別利用者数ランキング
                 const storeUserRanking = Array.isArray(data.storeUserRanking)
                     ? [...data.storeUserRanking]
                     : [];
@@ -404,15 +436,15 @@
                     '人'
                 );
 
-                document.getElementById('lastUpdated').textContent =
-                    new Date().toLocaleString('ja-JP');
+                if (lastUpdated) {
+                    lastUpdated.textContent = new Date().toLocaleString('ja-JP');
+                }
 
                 showStatus('集計データを取得しました。', 'success');
 
             } catch (error) {
                 console.error('集計データ取得エラー:', error);
 
-                // CommentAnchor: 取得失敗時はすべて「データがありません」と表示
                 displayCount('totalUsers', null);
                 displayCount('activeUsers', null);
                 displayCount('finishedUsers', null);
@@ -420,94 +452,107 @@
                 renderRanking('recentUserRankingBody', [], 'userName', 'useCount', '回');
                 renderRanking('storeUserRankingBody', [], 'storeName', 'userCount', '人');
 
-                document.getElementById('lastUpdated').textContent = '未取得';
+                if (lastUpdated) {
+                    lastUpdated.textContent = '未取得';
+                }
 
                 showStatus('データがありません', 'warning');
+
             } finally {
-                refreshButton.disabled = false;
-                refreshButton.textContent = '集計データを更新';
+                if (refreshButton) {
+                    refreshButton.disabled = false;
+                    refreshButton.textContent = '集計データを更新';
+                }
             }
         }
 
         // CommentAnchor: 集計データ更新ボタン
-        refreshButton.addEventListener('click', loadStatistics);
+        if (refreshButton) {
+            refreshButton.addEventListener('click', loadStatistics);
+        }
 
-        // CommentAnchor: CSV出力
-        exportForm.addEventListener('submit', async function (event) {
-            event.preventDefault();
-            hideStatus();
+        // CommentAnchor: CSVファイルのダウンロード
+        if (exportForm) {
+            exportForm.addEventListener('submit', async function (event) {
+                event.preventDefault();
+                hideStatus();
 
-            exportButton.disabled = true;
-            exportButton.textContent = '出力中...';
+                if (exportButton) {
+                    exportButton.disabled = true;
+                    exportButton.textContent = '出力中...';
+                }
 
-            let downloadUrl = null;
+                let downloadUrl = null;
 
-            try {
-                const exportType = document.getElementById('exportType').value;
-                const url =
-                    `${EXPORT_API_URL}?type=${encodeURIComponent(exportType)}`;
+                try {
+                    const exportType = document.getElementById('exportType').value;
+                    const url = `${EXPORT_API_URL}?type=${encodeURIComponent(exportType)}`;
 
-                const response = await fetch(url, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: {
-                        'Accept': 'text/csv'
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: {
+                            'Accept': 'text/csv'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        let message = 'データがありません';
+
+                        try {
+                            const errorData = await response.json();
+                            message = errorData.message || message;
+                        } catch (error) {
+                            // CommentAnchor: JSONでないエラー応答は既定のメッセージを使う
+                        }
+
+                        throw new Error(message);
                     }
-                });
 
-                if (!response.ok) {
-                    let message = 'データがありません';
+                    const blob = await response.blob();
 
-                    try {
-                        const errorData = await response.json();
-                        message = errorData.message || message;
-                    } catch (error) {
-                        // エラーレスポンスがJSONでない場合
+                    if (blob.size === 0) {
+                        throw new Error('データがありません');
                     }
 
-                    throw new Error(message);
+                    downloadUrl = URL.createObjectURL(blob);
+
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download =
+                        `${exportType}_${new Date().toISOString().slice(0, 10)}.csv`;
+
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+
+                    showStatus('CSVファイルをダウンロードしました。', 'success');
+
+                } catch (error) {
+                    console.error('CSV出力エラー:', error);
+                    showStatus('データがありません', 'warning');
+
+                } finally {
+                    if (downloadUrl !== null) {
+                        URL.revokeObjectURL(downloadUrl);
+                    }
+
+                    if (exportButton) {
+                        exportButton.disabled = false;
+                        exportButton.textContent = 'CSVをダウンロード';
+                    }
                 }
-
-                const blob = await response.blob();
-
-                if (blob.size === 0) {
-                    throw new Error('データがありません');
-                }
-
-                downloadUrl = URL.createObjectURL(blob);
-
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download =
-                    `${exportType}_${new Date().toISOString().slice(0, 10)}.csv`;
-
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-
-                showStatus('CSVファイルをダウンロードしました。', 'success');
-
-            } catch (error) {
-                console.error('CSV出力エラー:', error);
-                showStatus('データがありません', 'warning');
-            } finally {
-                if (downloadUrl !== null) {
-                    URL.revokeObjectURL(downloadUrl);
-                }
-
-                exportButton.disabled = false;
-                exportButton.textContent = 'CSVをダウンロード';
-            }
-        });
+            });
+        }
 
         // CommentAnchor: ページ読み込み時に集計データを取得
         loadStatistics();
     </script>
 
-    <!-- CommentAnchor: フッター読み込み -->
+    <!-- CommentAnchor: 共通フッター -->
     <?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/footer.php'; ?>
 
-    <!-- CommentAnchor: CSRFトークンの読み込み -->
+    <!-- CommentAnchor: CSRFトークン読み込み -->
     <?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/fetch_csrf_token.php'; ?>
 
 </body>
