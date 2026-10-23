@@ -295,6 +295,7 @@
                 const time2 = Number.isNaN(t2) ? 0 : t2;
                 return time2 - time1;
             }).forEach((score) => {
+                const row = document.createElement('tr');
                 const dateCell = document.createElement('td');
                 dateCell.textContent = formatDate(score.createdAt);
                 dateCell.setAttribute('data-label', '日時');
@@ -310,8 +311,7 @@
 
                 row.append(dateCell, storeCell, pointCell);
                 scoreHistory.appendChild(row);
-            });
-        }
+            });        }
 
         function renderQrCode(token) {
             const qrCode = document.getElementById('qrCode');
