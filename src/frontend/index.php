@@ -145,7 +145,7 @@
         (() => {
         // CommentAnchor: API_SETTINGS
         // API_URLは環境変数で設定します。未設定の場合は同一オリジンを使用します。
-        const API_BASE_URL = <?= json_encode(rtrim((string) (getenv('API_URL') ?: ''), '/'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+        const API_BASE_URL = <?= json_encode(rtrim((string) (getenv('API_URL') ?: ''), '/'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
         const API_ENDPOINTS = {
             generate: '/api/user/generate',
             info: '/api/user/info',
@@ -202,20 +202,29 @@
          * template.phpと同じ方式で、fetch_csrf_token.phpが埋め込むhiddenフィールドから取得します。
          * CSRF取得用コンポーネントはこのスクリプトより前にincludeし、初期化時に値を読み取ります。
          */
-        async function loadCsrfToken() {
-            // コンポーネント側がDOMContentLoadedで値を埋め込む実装にも対応します。
-            if (document.readyState === 'loading') {
-                await new Promise((resolve) => {
-                    document.addEventListener('DOMContentLoaded', resolve, { once: true });
-                });
-            }
 
-            const csrfInput = document.querySelector('.csrf_token');
-            csrfToken = csrfInput?.value?.trim() || '';
-            if (!csrfToken) {
-                throw new Error('CSRFトークンを取得できませんでした。fetch_csrf_token.phpの埋め込み処理を確認してください。');
-            }
+    async function loadCsrfToken() {
+    const maxAttempts = 50;
+    const interval = 100;
+
+    for (let i = 0; i < maxAttempts; i++) {
+        const csrfInput = document.querySelector('.csrf_token');
+        const token = csrfInput?.value?.trim() || '';
+
+        if (token) {
+            csrfToken = token;
+            return csrfToken;
         }
+
+        await new Promise((resolve) => setTimeout(resolve, interval));
+    }
+
+    throw new Error(
+        'CSRFトークンを取得できませんでした。' +
+        'fetch_csrf_token.phpの埋め込み処理を確認してください。'
+    );
+}
+
 
         function showAlert(message, type = 'danger') {
             const alertArea = document.getElementById('alertArea');
@@ -423,17 +432,16 @@
             }
         }
 
-        async function initializePage() {
-            try {
-                await loadCsrfToken();
-                await loadUserInfo();
-                await sendHeartbeat();
-                heartbeatTimer = window.setInterval(sendHeartbeat, 60 * 1000);
-            } catch (error) {
-                showAlert(error.message || 'ページの初期化に失敗しました。');
-                document.getElementById('accountStatus').textContent = '取得失敗';
-            }
-        }
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await loadCsrfToken();
+
+        // CSRFトークンが取得できた後に初期化する
+        await initializePage();
+    } catch (error) {
+        console.error('ページの初期化に失敗しました:', error);
+    }
+});
 
         document.getElementById('generateButton').addEventListener('click', generateUser);
         document.getElementById('refreshButton').addEventListener('click', async () => {
@@ -449,11 +457,6 @@
             }
         });
 
-        window.addEventListener('beforeunload', () => {
-            if (heartbeatTimer !== null) {
-                window.clearInterval(heartbeatTimer);
-            }
-        });
 
         initializePage();
         })();
