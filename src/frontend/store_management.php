@@ -2,18 +2,15 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <!-- 基本設定 -->
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="乙成隼士,松本浩成,永島愛貴,塩川海響,星川誠弥,中島悠翔">
 
-    <!-- ファビコン -->
     <link rel="icon" href="/images/CFMS.ico" sizes="any">
     <link rel="icon" href="/images/CFMS.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/images/CFMS.png">
 
-    <!-- OGP設定 -->
     <meta property="og:title" content="店舗管理ページ">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://nkc.sanae.dev">
@@ -21,12 +18,12 @@
     <meta property="og:image:alt" content="CFMS">
     <meta property="og:description" content="得点付与対象の店舗を管理します">
 
-    <!-- タイトル・説明 -->
     <title>店舗管理ページ</title>
     <meta name="description" content="管理者用の店舗・ブース管理ページ">
     <meta name="keywords" content="nkc,名古屋工学院専門学校,文化祭">
 
-    <!-- Bootstrap -->
+    <meta name="csrf-token" content="">
+
     <link rel="stylesheet" href="/lib/bootstrap-5.3.8-dist/css/bootstrap.min.css">
     <script src="/lib/bootstrap-5.3.8-dist/js/bootstrap.bundle.min.js" defer></script>
 </head>
@@ -36,7 +33,6 @@
 <main class="container py-4">
     <div class="card shadow-sm">
 
-        <!-- ページヘッダー -->
         <div class="card-header bg-primary text-white p-3">
             <h1 class="h4 mb-1">店舗管理</h1>
             <p class="small mb-0">管理者用｜店舗・ブースの登録と管理</p>
@@ -44,7 +40,7 @@
 
         <div class="card-body">
 
-            <!-- 結果・エラーメッセージ -->
+            <!-- メッセージ -->
             <div
                 id="messageArea"
                 class="alert d-none"
@@ -52,15 +48,12 @@
                 aria-live="polite"
             ></div>
 
-            <!-- 店舗登録・更新フォーム -->
+            <!-- 店舗登録・更新 -->
             <section class="mb-4">
                 <h2 class="h5 mb-3" id="formTitle">店舗の新規登録</h2>
 
                 <form id="storeForm">
-                    <!-- CSRFトークン -->
                     <input type="hidden" name="csrf_token" value="">
-
-                    <!-- 編集時の店舗ID -->
                     <input type="hidden" id="storeId" name="storeId" value="">
 
                     <div class="mb-3">
@@ -124,7 +117,6 @@
                     登録されている店舗を確認・編集・削除できます。
                 </p>
 
-                <!-- 読み込み状態 -->
                 <div
                     id="loadingArea"
                     class="text-center py-4 d-none"
@@ -133,7 +125,6 @@
                     店舗一覧を読み込んでいます...
                 </div>
 
-                <!-- 店舗がない場合 -->
                 <div
                     id="emptyArea"
                     class="alert alert-secondary d-none"
@@ -142,7 +133,6 @@
                     登録されている店舗はありません。
                 </div>
 
-                <!-- 店舗一覧テーブル -->
                 <div class="table-responsive">
                     <table class="table table-bordered table-striped align-middle">
                         <thead class="table-primary">
@@ -171,11 +161,8 @@
     </div>
 </main>
 
-<!-- 共通フッター：1回だけ読み込む -->
-<?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/footer.php'; ?>
-
-<!-- CSRFトークンの自動埋め込み：1回だけ読み込む -->
 <?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/fetch_csrf_token.php'; ?>
+<?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/footer.php'; ?>
 
 <script>
 (() => {
@@ -202,6 +189,13 @@
     const emptyArea = document.getElementById('emptyArea');
 
     // ========================================
+    // API設定
+    // 指定されたAPI_URLとtemplate.phpを使用
+    // ========================================
+
+    const API_URL = '<?= getenv('API_URL') ?>/template/template.php';
+
+    // ========================================
     // 状態管理
     // ========================================
 
@@ -211,7 +205,7 @@
     let deletingStoreId = null;
 
     // ========================================
-    // メッセージ表示
+    // メッセージ
     // ========================================
 
     function showMessage(message, type = 'info') {
@@ -243,10 +237,26 @@
     }
 
     // ========================================
-    // APIレスポンス確認
+    // 指定された形式でAPI通信
+    // fetch + POST + credentials: include
     // ========================================
 
-    async function readResponse(response) {
+    async function callApi(requestData) {
+        const csrfToken = getCsrfToken();
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                ...requestData,
+                csrf_token: csrfToken
+            })
+        });
+
         let data;
 
         try {
@@ -257,19 +267,21 @@
             );
         }
 
-        if (!response.ok || data.success !== true) {
+        if (!response.ok) {
             throw new Error(
                 data.message ||
                 `通信エラーが発生しました（${response.status}）。`
             );
         }
 
+        if (data.success !== true) {
+            throw new Error(
+                data.message || '処理に失敗しました。'
+            );
+        }
+
         return data;
     }
-
-    // ========================================
-    // エラー表示用メッセージ
-    // ========================================
 
     function getErrorMessage(error, fallback) {
         return error instanceof Error && error.message
@@ -279,8 +291,9 @@
 
     // ========================================
     // 店舗一覧取得
-    // GET /api/admin/stores
-    // force=true の場合は保存・削除後の再取得を許可する
+    //
+    // action: list_stores は仮の操作名です。
+    // template.php の実際の仕様に合わせてください。
     // ========================================
 
     async function loadStores(force = false) {
@@ -311,18 +324,14 @@
         storeList.appendChild(loadingRow);
 
         try {
-            const response = await fetch('/api/admin/stores', {
-                method: 'GET',
-                credentials: 'same-origin',
-                headers: {
-                    'Accept': 'application/json'
-                }
+            const data = await callApi({
+                action: 'list_stores'
             });
 
-            const data = await readResponse(response);
-
             if (!Array.isArray(data.stores)) {
-                throw new Error('店舗一覧の形式が正しくありません。');
+                throw new Error(
+                    '店舗一覧の形式が正しくありません。'
+                );
             }
 
             stores = data.stores;
@@ -343,7 +352,10 @@
             storeList.appendChild(tr);
 
             showMessage(
-                getErrorMessage(error, '店舗一覧の取得に失敗しました。'),
+                getErrorMessage(
+                    error,
+                    '店舗一覧の取得に失敗しました。'
+                ),
                 'danger'
             );
 
@@ -363,7 +375,10 @@
     function renderStores() {
         storeList.replaceChildren();
 
-        emptyArea.classList.toggle('d-none', stores.length !== 0);
+        emptyArea.classList.toggle(
+            'd-none',
+            stores.length !== 0
+        );
 
         if (stores.length === 0) {
             return;
@@ -372,11 +387,11 @@
         stores.forEach((store) => {
             const tr = document.createElement('tr');
 
+            const id = store.storeId ?? store.id ?? '-';
+
             // 店舗ID
             const idCell = document.createElement('td');
-            idCell.textContent = String(
-                store.storeId ?? store.id ?? '-'
-            );
+            idCell.textContent = String(id);
 
             // 店舗名
             const nameCell = document.createElement('td');
@@ -394,7 +409,8 @@
             editButton.type = 'button';
             editButton.className = 'btn btn-sm btn-outline-primary';
             editButton.textContent = '編集';
-            editButton.disabled = saving || deletingStoreId !== null;
+            editButton.disabled =
+                saving || deletingStoreId !== null;
 
             editButton.addEventListener('click', () => {
                 startEdit(store);
@@ -406,7 +422,8 @@
             deleteButton.type = 'button';
             deleteButton.className = 'btn btn-sm btn-outline-danger';
             deleteButton.textContent = '削除';
-            deleteButton.disabled = saving || deletingStoreId !== null;
+            deleteButton.disabled =
+                saving || deletingStoreId !== null;
 
             deleteButton.addEventListener('click', () => {
                 deleteStore(store);
@@ -421,8 +438,7 @@
     }
 
     // ========================================
-    // 新規登録フォームに戻す
-    // CSRFトークンは reset() で消えないように保持する
+    // フォーム初期化
     // ========================================
 
     function resetForm() {
@@ -483,7 +499,8 @@
 
     // ========================================
     // 新規登録・更新
-    // POST /api/admin/store
+    //
+    // action: create_store / update_store は仮の操作名です。
     // ========================================
 
     storeForm.addEventListener('submit', async (event) => {
@@ -497,7 +514,10 @@
         const storeId = storeIdInput.value.trim();
 
         if (!name) {
-            showMessage('店舗名を入力してください。', 'warning');
+            showMessage(
+                '店舗名を入力してください。',
+                'warning'
+            );
             storeNameInput.focus();
             return;
         }
@@ -511,9 +531,7 @@
             return;
         }
 
-        const csrfToken = getCsrfToken();
-
-        if (!csrfToken) {
+        if (!getCsrfToken()) {
             showMessage(
                 'CSRFトークンを取得できません。ページを再読み込みしてください。',
                 'danger'
@@ -523,16 +541,17 @@
 
         const isUpdate = storeId !== '';
 
-        const requestBody = {
-            name: name,
-            csrfToken: csrfToken
+        const requestData = {
+            action: isUpdate ? 'update_store' : 'create_store',
+            name: name
         };
 
         if (isUpdate) {
-            requestBody.storeId = storeId;
+            requestData.storeId = storeId;
         }
 
         saving = true;
+
         saveButton.disabled = true;
         cancelEditButton.disabled = true;
         reloadButton.disabled = true;
@@ -540,20 +559,7 @@
         clearMessage();
 
         try {
-            const response = await fetch('/api/admin/store', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: JSON.stringify(requestBody)
-            });
-
-            // HTTPステータスとsuccessを確認する。
-            // data.storeの有無はAPI仕様に合わせて任意とする。
-            await readResponse(response);
+            const data = await callApi(requestData);
 
             showMessage(
                 isUpdate
@@ -564,12 +570,15 @@
 
             resetForm();
 
-            // 保存中フラグを解除せずに強制再取得する
+            // 保存後に一覧を再取得
             await loadStores(true);
 
         } catch (error) {
             showMessage(
-                getErrorMessage(error, '店舗の保存に失敗しました。'),
+                getErrorMessage(
+                    error,
+                    '店舗の保存に失敗しました。'
+                ),
                 'danger'
             );
 
@@ -583,7 +592,8 @@
 
     // ========================================
     // 削除
-    // POST /api/admin/store/delete
+    //
+    // action: delete_store は仮の操作名です。
     // ========================================
 
     async function deleteStore(store) {
@@ -612,9 +622,7 @@
             return;
         }
 
-        const csrfToken = getCsrfToken();
-
-        if (!csrfToken) {
+        if (!getCsrfToken()) {
             showMessage(
                 'CSRFトークンを取得できません。ページを再読み込みしてください。',
                 'danger'
@@ -623,43 +631,36 @@
         }
 
         deletingStoreId = String(storeId);
+
         reloadButton.disabled = true;
 
         clearMessage();
-
-        // 操作ボタンを一時的に無効化する
         renderStores();
 
         try {
-            const response = await fetch('/api/admin/store/delete', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-Token': csrfToken
-                },
-                body: JSON.stringify({
-                    storeId: storeId,
-                    csrfToken: csrfToken
-                })
+            await callApi({
+                action: 'delete_store',
+                storeId: storeId
             });
 
-            await readResponse(response);
+            showMessage(
+                '店舗を削除しました。',
+                'success'
+            );
 
-            showMessage('店舗を削除しました。', 'success');
-
-            // 削除した店舗を編集中ならフォームをリセット
             if (storeIdInput.value === String(storeId)) {
                 resetForm();
             }
 
-            // 削除中フラグを解除せずに強制再取得する
+            // 削除後に一覧を再取得
             await loadStores(true);
 
         } catch (error) {
             showMessage(
-                getErrorMessage(error, '店舗を削除できませんでした。'),
+                getErrorMessage(
+                    error,
+                    '店舗を削除できませんでした。'
+                ),
                 'danger'
             );
 

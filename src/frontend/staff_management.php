@@ -1,32 +1,26 @@
-
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-    <!-- 基本設定 -->
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="乙成隼士,松本浩成,永島愛貴,塩川海響,星川誠弥,中島悠翔">
-    <meta name="description" content="スタッフアカウント、権限、所属店舗を管理します">
-    <meta name="keywords" content="nkc,名古屋工学院専門学校,文化祭">
 
-    <!-- CSRFトークン -->
-    <meta name="csrf-token" content="">
-
-    <!-- ファビコン -->
     <link rel="icon" href="/images/CFMS.ico" sizes="any">
     <link rel="icon" href="/images/CFMS.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/images/CFMS.png">
 
-    <!-- OGP設定 -->
+    <meta name="keywords" content="nkc,名古屋工学院専門学校,文化祭">
     <meta property="og:title" content="スタッフ管理ページ">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://nkc.sanae.dev">
     <meta property="og:image" content="/images/CFMS.png">
     <meta property="og:image:alt" content="CFMS">
-    <meta property="og:description" content="管理者向けスタッフ管理ページ">
+    <meta property="og:description" content="スタッフ情報を管理するページ">
 
     <title>スタッフ管理ページ</title>
+    <meta name="description" content="スタッフ情報の登録・編集・削除を行います">
 
     <!-- Bootstrap -->
     <link rel="stylesheet" href="/lib/bootstrap-5.3.8-dist/css/bootstrap.min.css">
@@ -35,104 +29,80 @@
 
 <body class="bg-light">
 
-<main class="container py-4">
+    <main class="container py-4">
 
-    <div class="card shadow-sm">
-
-        <!-- ヘッダー -->
         <div class="card-header bg-primary text-white p-3">
             <h1 class="h4 mb-1">スタッフ管理</h1>
-            <p class="small mb-0">管理者用｜アカウント・権限・店舗管理</p>
+            <p class="small mb-0">管理者用｜スタッフ情報の登録・編集・削除</p>
         </div>
 
-        <div class="card-body">
+        <!-- メッセージ表示 -->
+        <div id="result" class="mb-3" aria-live="polite"></div>
 
-            <!-- 結果・エラーメッセージ -->
-            <div
-                id="messageArea"
-                class="alert d-none"
-                role="alert"
-                aria-live="polite">
+        <!-- スタッフ一覧 -->
+        <section class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="h5 mb-0">スタッフ一覧</h2>
+                <button type="button" class="btn btn-primary" id="newStaffBtn">
+                    新規登録
+                </button>
             </div>
 
-            <!-- スタッフ一覧 -->
-            <section class="mb-4">
-
-                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
-                    <h2 class="h5 mb-0">スタッフ一覧</h2>
-
-                    <button
-                        type="button"
-                        id="newStaffButton"
-                        class="btn btn-primary">
-                        ＋ 新規作成
-                    </button>
-                </div>
-
+            <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-bordered table-striped align-middle">
-                        <thead class="table-light">
+                        <thead class="table-dark">
                             <tr>
                                 <th>スタッフID</th>
-                                <th>スタッフ名</th>
-                                <th>権限</th>
-                                <th>所属店舗</th>
+                                <th>名前</th>
+                                <th>役割</th>
+                                <th>担当店舗</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
-
                         <tbody id="staffList">
                             <tr>
-                                <td colspan="5" class="text-center text-secondary">
-                                    読み込み中...
+                                <td colspan="5" class="text-center">
+                                    スタッフ情報を読み込んでいます。
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </section>
 
-            </section>
+        <!-- スタッフ登録・編集フォーム -->
+        <section class="card shadow-sm mb-4" id="staffFormSection">
+            <div class="card-header">
+                <h2 class="h5 mb-0" id="formTitle">スタッフ登録</h2>
+            </div>
 
-            <hr>
-
-            <!-- スタッフ新規作成・編集 -->
-            <section id="staffFormSection">
-
-                <h2 class="h5 mb-3" id="formTitle">
-                    スタッフ新規作成
-                </h2>
-
+            <div class="card-body">
                 <form id="staffForm">
-
                     <!-- CSRFトークン -->
-                    <input type="hidden" name="csrf_token" value="">
+                    <input type="hidden" class="csrf_token" name="csrf_token" value="">
 
-                    <!-- スタッフID -->
+                    <!-- 編集対象のスタッフID -->
+                    <input type="hidden" id="originalStaffId">
+
                     <div class="mb-3">
                         <label for="staffId" class="form-label">
-                            スタッフID *
+                            スタッフID <span class="text-danger">*</span>
                         </label>
-
                         <input
                             type="text"
                             class="form-control"
                             id="staffId"
                             name="staffId"
                             maxlength="100"
-                            autocomplete="off"
                             required>
-
-                        <div class="form-text">
-                            編集時はスタッフIDを変更できません。
-                        </div>
                     </div>
 
-                    <!-- スタッフ名 -->
                     <div class="mb-3">
                         <label for="staffName" class="form-label">
-                            スタッフ名 *
+                            名前 <span class="text-danger">*</span>
                         </label>
-
                         <input
                             type="text"
                             class="form-control"
@@ -142,29 +112,24 @@
                             required>
                     </div>
 
-                    <!-- パスワード -->
                     <div class="mb-3">
                         <label for="staffPassword" class="form-label">
                             パスワード
-                            <span id="passwordRequiredMark">*</span>
                         </label>
-
                         <input
                             type="password"
                             class="form-control"
                             id="staffPassword"
                             name="password"
                             autocomplete="new-password">
-
-                        <div class="form-text" id="passwordHelp">
-                            新規作成時は必須です。編集時は変更する場合のみ入力してください。
+                        <div class="form-text">
+                            編集時に変更しない場合は空欄にしてください。
                         </div>
                     </div>
 
-                    <!-- 権限 -->
                     <fieldset class="mb-3">
-                        <legend class="form-label fs-6">
-                            権限 *
+                        <legend class="form-label">
+                            役割 <span class="text-danger">*</span>
                         </legend>
 
                         <div class="form-check">
@@ -175,7 +140,6 @@
                                 id="roleReception"
                                 value="reception"
                                 required>
-
                             <label class="form-check-label" for="roleReception">
                                 受付
                             </label>
@@ -188,9 +152,8 @@
                                 name="role"
                                 id="roleStore"
                                 value="store">
-
                             <label class="form-check-label" for="roleStore">
-                                店舗
+                                店舗スタッフ
                             </label>
                         </div>
 
@@ -201,7 +164,6 @@
                                 name="role"
                                 id="rolePrize"
                                 value="prize">
-
                             <label class="form-check-label" for="rolePrize">
                                 景品担当
                             </label>
@@ -214,697 +176,459 @@
                                 name="role"
                                 id="roleAdmin"
                                 value="admin">
-
                             <label class="form-check-label" for="roleAdmin">
                                 管理者
                             </label>
                         </div>
                     </fieldset>
 
-                    <!-- 所属店舗 -->
                     <fieldset class="mb-4">
-                        <legend class="form-label fs-6">
-                            所属店舗
-                        </legend>
-
+                        <legend class="form-label">担当店舗</legend>
                         <div id="storeCheckboxes">
-                            <p class="text-secondary small">
-                                店舗一覧を読み込んでいます...
+                            <p class="text-muted mb-0">
+                                店舗情報を読み込んでいます。
                             </p>
-                        </div>
-
-                        <div class="form-text">
-                            所属する店舗を複数選択できます。
                         </div>
                     </fieldset>
 
-                    <!-- 保存・キャンセル -->
-                    <div class="d-grid gap-2 d-sm-flex">
-
-                        <button
-                            type="submit"
-                            id="saveButton"
-                            class="btn btn-success flex-fill">
-                            保存
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="submit" class="btn btn-primary" id="saveStaffBtn">
+                            登録する
                         </button>
-
-                        <button
-                            type="button"
-                            id="cancelButton"
-                            class="btn btn-outline-secondary flex-fill">
+                        <button type="button" class="btn btn-secondary" id="cancelBtn">
                             キャンセル
                         </button>
+                    </div>
+                </form>
+            </div>
+        </section>
 
+        <!-- スタッフ削除フォーム -->
+        <section class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h2 class="h5 mb-0">スタッフ削除</h2>
+            </div>
+
+            <div class="card-body">
+                <form id="deleteForm">
+                    <input type="hidden" class="csrf_token" name="csrf_token" value="">
+
+                    <div class="mb-3">
+                        <label for="deleteStaffId" class="form-label">
+                            削除するスタッフID
+                        </label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="deleteStaffId"
+                            name="staffId"
+                            required>
                     </div>
 
-                </form>
-
-                <!-- スタッフ削除 -->
-                <form id="deleteForm" class="mt-3 d-none">
-                    <input type="hidden" name="csrf_token" value="">
-
-                    <button
-                        type="submit"
-                        id="deleteButton"
-                        class="btn btn-danger w-100">
-                        このスタッフを削除
+                    <button type="submit" class="btn btn-danger">
+                        スタッフを削除
                     </button>
                 </form>
+            </div>
+        </section>
 
-            </section>
+    </main>
 
-        </div>
+    <script>
+        // APIのURL
+        const API_URL = '<?= getenv('API_URL') ?>/template/template.php';
 
-        <div class="card-footer text-secondary small">
-            スタッフ管理ページ
-        </div>
-
-    </div>
-
-</main>
-
-<!-- 共通フッター -->
-<?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/footer.php'; ?>
-
-<!-- CSRFトークンの自動埋め込み -->
-<?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/fetch_csrf_token.php'; ?>
-
-<script>
-(() => {
-    'use strict';
-
-    // ========================================
-    // DOM要素
-    // ========================================
-
-    const staffList = document.getElementById('staffList');
-    const staffForm = document.getElementById('staffForm');
-    const deleteForm = document.getElementById('deleteForm');
-    const messageArea = document.getElementById('messageArea');
-
-    const staffIdInput = document.getElementById('staffId');
-    const staffNameInput = document.getElementById('staffName');
-    const staffPasswordInput = document.getElementById('staffPassword');
-
-    const storeCheckboxes = document.getElementById('storeCheckboxes');
-
-    const formTitle = document.getElementById('formTitle');
-    const saveButton = document.getElementById('saveButton');
-    const deleteButton = document.getElementById('deleteButton');
-
-    const newStaffButton = document.getElementById('newStaffButton');
-    const cancelButton = document.getElementById('cancelButton');
-
-    // ========================================
-    // 状態管理
-    // ========================================
-
-    let editing = false;
-    let loadingStaffs = false;
-    let saving = false;
-    let deleting = false;
-    let loadingStores = false;
-
-    let staffs = [];
-    let stores = [];
-
-    // ========================================
-    // メッセージ表示
-    // ========================================
-
-    function showMessage(message, type = 'info') {
-        messageArea.textContent = message;
-        messageArea.className = `alert alert-${type}`;
-    }
-
-    function clearMessage() {
-        messageArea.textContent = '';
-        messageArea.className = 'alert d-none';
-    }
-
-    // ========================================
-    // CSRFトークン取得
-    // ========================================
-
-    function getCsrfToken() {
-        const meta = document.querySelector(
-            'meta[name="csrf-token"]'
-        );
-
-        if (meta && meta.content.trim() !== '') {
-            return meta.content.trim();
-        }
-
-        const inputs = document.querySelectorAll(
-            'input[name="csrf_token"]'
-        );
-
-        for (const input of inputs) {
-            if (input.value.trim() !== '') {
-                return input.value.trim();
+        // モック用スタッフデータ
+        let staffs = [
+            {
+                staffId: 'staff001',
+                name: '山田太郎',
+                role: 'reception',
+                storeIds: ['1']
+            },
+            {
+                staffId: 'staff002',
+                name: '佐藤花子',
+                role: 'store',
+                storeIds: ['1', '2']
             }
-        }
+        ];
 
-        return '';
-    }
+        // モック用店舗データ
+        let stores = [
+            { id: '1', name: '1組店舗' },
+            { id: '2', name: '2組店舗' },
+            { id: '3', name: '3組店舗' }
+        ];
 
-    function requireCsrfToken() {
-        const token = getCsrfToken();
-
-        if (!token) {
-            throw new Error(
-                'CSRFトークンを取得できません。ページを再読み込みしてください。'
-            );
-        }
-
-        return token;
-    }
-
-    // ========================================
-    // APIレスポンス処理
-    // ========================================
-
-    async function readResponse(response) {
-        let data;
-
-        try {
-            data = await response.json();
-        } catch {
-            throw new Error(
-                'サーバーから正しいJSON応答がありません。'
-            );
-        }
-
-        if (!response.ok || data.success !== true) {
-            throw new Error(
-                data.message ||
-                `通信エラーが発生しました（${response.status}）。`
-            );
-        }
-
-        return data;
-    }
-
-    // ========================================
-    // 共通APIリクエスト
-    // ========================================
-
-    async function apiRequest(url, method = 'GET', payload = null) {
-        const headers = {
-            'Accept': 'application/json'
-        };
-
-        const options = {
-            method: method,
-            credentials: 'same-origin',
-            headers: headers
-        };
-
-        if (payload !== null) {
-            const csrfToken = requireCsrfToken();
-
-            payload.csrfToken = csrfToken;
-
-            headers['Content-Type'] = 'application/json';
-            headers['X-CSRF-Token'] = csrfToken;
-
-            options.body = JSON.stringify(payload);
-        }
-
-        const response = await fetch(url, options);
-
-        return await readResponse(response);
-    }
-
-    // ========================================
-    // 権限名変換
-    // ========================================
-
-    function roleLabel(role) {
-        const roles = {
+        const roleNames = {
             reception: '受付',
-            store: '店舗',
+            store: '店舗スタッフ',
             prize: '景品担当',
             admin: '管理者'
         };
 
-        return roles[role] ?? role ?? '-';
-    }
+        // 結果メッセージを表示
+        function renderResult(data) {
+            const resultDiv = document.getElementById('result');
 
-    // ========================================
-    // スタッフ一覧取得
-    // GET /api/admin/staffs
-    // ========================================
+            resultDiv.replaceChildren();
 
-    async function loadStaffs() {
-        if (loadingStaffs) return;
+            const alertDiv = document.createElement('div');
+            alertDiv.className = data.success
+                ? 'alert alert-success'
+                : 'alert alert-danger';
 
-        loadingStaffs = true;
+            alertDiv.textContent = data.message || (
+                data.success ? '処理が完了しました。' : '処理に失敗しました。'
+            );
 
-        staffList.replaceChildren();
+            resultDiv.appendChild(alertDiv);
 
-        const row = document.createElement('tr');
-        const cell = document.createElement('td');
+            if (data.data) {
+                console.log('サーバーからのデータ:', data.data);
+            }
+        }
 
-        cell.colSpan = 5;
-        cell.className = 'text-center';
-        cell.textContent = '読み込み中...';
+        // CSRFトークンを取得
+        function getCsrfToken() {
+            return document.querySelector('.csrf_token').value;
+        }
 
-        row.appendChild(cell);
-        staffList.appendChild(row);
+        // 指定されたデータをAPIへ送信
+        // fetchの形式は提示されたテンプレートに合わせる
+        function callApi(requestData) {
+            const csrf_token = getCsrfToken();
 
-        try {
-            const data = await apiRequest('/api/admin/staffs');
+            return fetch(API_URL, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ...requestData,
+                    csrf_token
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('通信に失敗しました。');
+                }
+                return response.json();
+            });
+        }
 
-            staffs = Array.isArray(data.staffs)
-                ? data.staffs
-                : [];
-
-            renderStaffs();
-
-        } catch (error) {
+        // スタッフ一覧を表示
+        function renderStaffs() {
+            const staffList = document.getElementById('staffList');
             staffList.replaceChildren();
 
-            const errorRow = document.createElement('tr');
-            const errorCell = document.createElement('td');
+            if (staffs.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
 
-            errorCell.colSpan = 5;
-            errorCell.className = 'text-danger text-center';
-            errorCell.textContent = error.message;
+                td.colSpan = 5;
+                td.className = 'text-center text-muted';
+                td.textContent = 'スタッフが登録されていません。';
 
-            errorRow.appendChild(errorCell);
-            staffList.appendChild(errorRow);
+                tr.appendChild(td);
+                staffList.appendChild(tr);
+                return;
+            }
 
-            showMessage(error.message, 'danger');
+            staffs.forEach(staff => {
+                const tr = document.createElement('tr');
 
-        } finally {
-            loadingStaffs = false;
-        }
-    }
+                const idTd = document.createElement('td');
+                idTd.textContent = staff.staffId;
 
-    // ========================================
-    // スタッフ一覧表示
-    // ========================================
+                const nameTd = document.createElement('td');
+                nameTd.textContent = staff.name;
 
-    function renderStaffs() {
-        staffList.replaceChildren();
+                const roleTd = document.createElement('td');
+                roleTd.textContent = roleNames[staff.role] || staff.role;
 
-        if (staffs.length === 0) {
-            const row = document.createElement('tr');
-            const cell = document.createElement('td');
+                const storeTd = document.createElement('td');
+                const staffStores = stores
+                    .filter(store => (staff.storeIds || []).includes(store.id))
+                    .map(store => store.name);
 
-            cell.colSpan = 5;
-            cell.className = 'text-center text-secondary';
-            cell.textContent = 'スタッフが登録されていません。';
+                storeTd.textContent = staffStores.length > 0
+                    ? staffStores.join('、')
+                    : '未設定';
 
-            row.appendChild(cell);
-            staffList.appendChild(row);
+                const actionTd = document.createElement('td');
+                const buttonGroup = document.createElement('div');
+                buttonGroup.className = 'd-flex flex-wrap gap-2';
 
-            return;
-        }
+                const editButton = document.createElement('button');
+                editButton.type = 'button';
+                editButton.className = 'btn btn-sm btn-warning';
+                editButton.textContent = '編集';
+                editButton.addEventListener('click', () => editStaff(staff.staffId));
 
-        staffs.forEach((staff) => {
-            const row = document.createElement('tr');
+                const deleteButton = document.createElement('button');
+                deleteButton.type = 'button';
+                deleteButton.className = 'btn btn-sm btn-danger';
+                deleteButton.textContent = '削除';
+                deleteButton.addEventListener('click', () => {
+                    document.getElementById('deleteStaffId').value = staff.staffId;
+                    document.getElementById('deleteStaffId').focus();
+                });
 
-            const idCell = document.createElement('td');
-            idCell.textContent = staff.staffId ?? staff.id ?? '-';
+                buttonGroup.append(editButton, deleteButton);
+                actionTd.appendChild(buttonGroup);
 
-            const nameCell = document.createElement('td');
-            nameCell.textContent = staff.name ?? '-';
-
-            const roleCell = document.createElement('td');
-            roleCell.textContent = roleLabel(staff.role);
-
-            const storeCell = document.createElement('td');
-
-            const storeIds = Array.isArray(staff.storeIds)
-                ? staff.storeIds
-                : [];
-
-            const storeNames = storeIds.map((id) => {
-                const store = stores.find(
-                    (item) => String(item.id) === String(id)
-                );
-
-                return store
-                    ? store.name
-                    : `店舗ID:${id}`;
+                tr.append(idTd, nameTd, roleTd, storeTd, actionTd);
+                staffList.appendChild(tr);
             });
+        }
 
-            storeCell.textContent = storeNames.length > 0
-                ? storeNames.join('、')
-                : '未所属';
+        // 店舗チェックボックスを表示
+        function renderStoreCheckboxes(selectedStoreIds = []) {
+            const container = document.getElementById('storeCheckboxes');
+            container.replaceChildren();
 
-            const actionCell = document.createElement('td');
+            if (stores.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'text-muted';
+                p.textContent = '店舗が登録されていません。';
+                container.appendChild(p);
+                return;
+            }
 
-            const editButton = document.createElement('button');
+            stores.forEach(store => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'form-check';
 
-            editButton.type = 'button';
-            editButton.className = 'btn btn-sm btn-outline-primary';
-            editButton.textContent = '編集';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'form-check-input store-checkbox';
+                checkbox.id = `store-${store.id}`;
+                checkbox.value = store.id;
+                checkbox.checked = selectedStoreIds.includes(store.id);
 
-            editButton.addEventListener('click', () => {
-                editStaff(staff);
+                const label = document.createElement('label');
+                label.className = 'form-check-label';
+                label.htmlFor = checkbox.id;
+                label.textContent = store.name;
+
+                wrapper.append(checkbox, label);
+                container.appendChild(wrapper);
             });
-
-            actionCell.appendChild(editButton);
-
-            row.append(
-                idCell,
-                nameCell,
-                roleCell,
-                storeCell,
-                actionCell
-            );
-
-            staffList.appendChild(row);
-        });
-    }
-
-    // ========================================
-    // 店舗一覧取得
-    // GET /api/admin/stores
-    // ========================================
-
-    async function loadStores() {
-        if (loadingStores) return;
-
-        loadingStores = true;
-
-        try {
-            const data = await apiRequest('/api/admin/stores');
-
-            stores = Array.isArray(data.stores)
-                ? data.stores
-                : [];
-
-            renderStoreCheckboxes();
-            renderStaffs();
-
-        } catch (error) {
-            stores = [];
-            renderStoreCheckboxes();
-
-            showMessage(
-                `店舗一覧の取得に失敗しました：${error.message}`,
-                'danger'
-            );
-
-        } finally {
-            loadingStores = false;
-        }
-    }
-
-    // ========================================
-    // 所属店舗チェックボックス
-    // ========================================
-
-    function renderStoreCheckboxes(selectedIds = []) {
-        storeCheckboxes.replaceChildren();
-
-        if (stores.length === 0) {
-            const message = document.createElement('p');
-
-            message.className = 'text-secondary small';
-            message.textContent =
-                '店舗一覧を取得できません。店舗一覧APIを確認してください。';
-
-            storeCheckboxes.appendChild(message);
-            return;
         }
 
-        stores.forEach((store) => {
-            const wrapper = document.createElement('div');
+        // 選択された店舗IDを取得
+        function getSelectedStoreIds() {
+            return Array.from(
+                document.querySelectorAll('.store-checkbox:checked')
+            ).map(checkbox => checkbox.value);
+        }
 
-            wrapper.className = 'form-check';
+        // フォームを初期状態に戻す
+        function resetForm() {
+            document.getElementById('staffForm').reset();
+            document.getElementById('originalStaffId').value = '';
+            document.getElementById('staffId').disabled = false;
+            document.getElementById('formTitle').textContent = 'スタッフ登録';
+            document.getElementById('saveStaffBtn').textContent = '登録する';
+            renderStoreCheckboxes();
+        }
 
-            const checkbox = document.createElement('input');
+        // 新規登録フォームを表示
+        document.getElementById('newStaffBtn').addEventListener('click', () => {
+            resetForm();
+            document.getElementById('staffFormSection').scrollIntoView({
+                behavior: 'smooth'
+            });
+        });
 
-            checkbox.type = 'checkbox';
-            checkbox.className = 'form-check-input';
-            checkbox.name = 'storeIds[]';
-            checkbox.value = store.id;
-            checkbox.id = `store-${store.id}`;
+        // スタッフ編集
+        function editStaff(staffId) {
+            const staff = staffs.find(item => item.staffId === staffId);
 
-            checkbox.checked = selectedIds.some(
-                (id) => String(id) === String(store.id)
+            if (!staff) {
+                renderResult({
+                    success: false,
+                    message: 'スタッフが見つかりません。'
+                });
+                return;
+            }
+
+            document.getElementById('originalStaffId').value = staff.staffId;
+            document.getElementById('staffId').value = staff.staffId;
+            document.getElementById('staffId').disabled = true;
+            document.getElementById('staffName').value = staff.name;
+            document.getElementById('staffPassword').value = '';
+
+            const roleRadio = document.querySelector(
+                `input[name="role"][value="${staff.role}"]`
             );
 
-            const label = document.createElement('label');
+            if (roleRadio) {
+                roleRadio.checked = true;
+            }
 
-            label.className = 'form-check-label';
-            label.htmlFor = checkbox.id;
-            label.textContent = store.name ?? `店舗ID:${store.id}`;
+            renderStoreCheckboxes(staff.storeIds || []);
 
-            wrapper.append(checkbox, label);
-            storeCheckboxes.appendChild(wrapper);
+            document.getElementById('formTitle').textContent = 'スタッフ編集';
+            document.getElementById('saveStaffBtn').textContent = '更新する';
+
+            document.getElementById('staffFormSection').scrollIntoView({
+                behavior: 'smooth'
+            });
+        }
+
+        // 登録・更新
+        document.getElementById('staffForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const originalStaffId =
+                document.getElementById('originalStaffId').value;
+
+            const staffId = document.getElementById('staffId').value.trim();
+            const name = document.getElementById('staffName').value.trim();
+            const password = document.getElementById('staffPassword').value;
+            const role = document.querySelector('input[name="role"]:checked')?.value;
+            const storeIds = getSelectedStoreIds();
+
+            if (!staffId || !name || !role) {
+                renderResult({
+                    success: false,
+                    message: '必須項目を入力してください。'
+                });
+                return;
+            }
+
+            const isEditing = originalStaffId !== '';
+
+            const requestData = {
+                action: isEditing ? 'update_staff' : 'create_staff',
+                originalStaffId,
+                staffId,
+                name,
+                role,
+                storeIds
+            };
+
+            if (password) {
+                requestData.password = password;
+            }
+
+            callApi(requestData)
+                .then(data => {
+                    // モックとして画面上の一覧も更新
+                    if (isEditing) {
+                        staffs = staffs.map(staff =>
+                            staff.staffId === originalStaffId
+                                ? { staffId, name, role, storeIds }
+                                : staff
+                        );
+                    } else {
+                        const exists = staffs.some(
+                            staff => staff.staffId === staffId
+                        );
+
+                        if (exists) {
+                            renderResult({
+                                success: false,
+                                message: 'このスタッフIDはすでに登録されています。'
+                            });
+                            return;
+                        }
+
+                        staffs.push({ staffId, name, role, storeIds });
+                    }
+
+                    renderStaffs();
+                    resetForm();
+
+                    renderResult({
+                        success: data.success !== false,
+                        message: data.message || (
+                            isEditing
+                                ? 'スタッフ情報を更新しました。'
+                                : 'スタッフを登録しました。'
+                        ),
+                        data: data.data
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    renderResult({
+                        success: false,
+                        message: '通信エラーが発生しました。'
+                    });
+                });
         });
-    }
 
-    // ========================================
-    // 選択された店舗ID取得
-    // ========================================
+        // キャンセル
+        document.getElementById('cancelBtn').addEventListener('click', resetForm);
 
-    function getSelectedStoreIds() {
-        return Array.from(
-            storeCheckboxes.querySelectorAll(
-                'input[name="storeIds[]"]:checked'
-            )
-        ).map((input) => input.value);
-    }
+        // スタッフ削除
+        document.getElementById('deleteForm').addEventListener('submit', function(event) {
+            event.preventDefault();
 
-    // ========================================
-    // フォーム初期化
-    // ========================================
+            const staffId = document.getElementById('deleteStaffId').value.trim();
 
-    function resetForm() {
-        staffForm.reset();
+            if (!staffId) {
+                renderResult({
+                    success: false,
+                    message: '削除するスタッフIDを入力してください。'
+                });
+                return;
+            }
 
-        editing = false;
+            const staff = staffs.find(item => item.staffId === staffId);
 
-        staffIdInput.disabled = false;
-        staffPasswordInput.required = true;
+            if (!staff) {
+                renderResult({
+                    success: false,
+                    message: '指定されたスタッフが見つかりません。'
+                });
+                return;
+            }
 
-        document.getElementById(
-            'passwordRequiredMark'
-        ).classList.remove('d-none');
+            if (!confirm(`スタッフ「${staff.name}」を削除しますか？`)) {
+                return;
+            }
 
-        formTitle.textContent = 'スタッフ新規作成';
-        saveButton.textContent = '保存';
+            callApi({
+                action: 'delete_staff',
+                staffId
+            })
+            .then(data => {
+                staffs = staffs.filter(item => item.staffId !== staffId);
 
-        deleteForm.classList.add('d-none');
+                renderStaffs();
+                document.getElementById('deleteForm').reset();
 
+                renderResult({
+                    success: data.success !== false,
+                    message: data.message || 'スタッフを削除しました。',
+                    data: data.data
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                renderResult({
+                    success: false,
+                    message: '通信エラーが発生しました。'
+                });
+            });
+        });
+
+        // 初期表示
         renderStoreCheckboxes();
+        renderStaffs();
+    </script>
 
-        clearMessage();
-    }
+    <!-- フッター読み込み -->
+    <?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/footer.php'; ?>
 
-    // ========================================
-    // 新規作成ボタン
-    // ========================================
-
-    newStaffButton.addEventListener('click', () => {
-        resetForm();
-
-        document.getElementById('staffFormSection')
-            .scrollIntoView({ behavior: 'smooth' });
-    });
-
-    // ========================================
-    // 編集
-    // ========================================
-
-    function editStaff(staff) {
-        clearMessage();
-
-        editing = true;
-
-        staffIdInput.value = staff.staffId ?? staff.id ?? '';
-        staffIdInput.disabled = true;
-
-        staffNameInput.value = staff.name ?? '';
-        staffPasswordInput.value = '';
-        staffPasswordInput.required = false;
-
-        const selectedRole = staff.role ?? 'reception';
-
-        staffForm.querySelectorAll(
-            'input[name="role"]'
-        ).forEach((input) => {
-            input.checked = input.value === selectedRole;
-        });
-
-        renderStoreCheckboxes(staff.storeIds ?? []);
-
-        document.getElementById(
-            'passwordRequiredMark'
-        ).classList.add('d-none');
-
-        formTitle.textContent = 'スタッフ編集';
-        saveButton.textContent = '変更を保存';
-
-        deleteForm.classList.remove('d-none');
-
-        document.getElementById('staffFormSection')
-            .scrollIntoView({ behavior: 'smooth' });
-    }
-
-    // ========================================
-    // 保存
-    // POST /api/admin/staff
-    // ========================================
-
-    staffForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-
-        if (saving) return;
-
-        const staffId = staffIdInput.value.trim();
-        const name = staffNameInput.value.trim();
-        const password = staffPasswordInput.value;
-
-        const selectedRole = staffForm.querySelector(
-            'input[name="role"]:checked'
-        );
-
-        if (!staffId || !name || !selectedRole) {
-            showMessage(
-                'スタッフID、スタッフ名、権限を入力してください。',
-                'warning'
-            );
-            return;
-        }
-
-        if (!editing && !password) {
-            showMessage(
-                '新規作成時はパスワードが必須です。',
-                'warning'
-            );
-            return;
-        }
-
-        if (!editing && stores.length === 0) {
-            showMessage(
-                '店舗一覧を取得できていないため、保存できません。',
-                'warning'
-            );
-            return;
-        }
-
-        const payload = {
-            staffId: staffId,
-            name: name,
-            role: selectedRole.value,
-            storeIds: getSelectedStoreIds()
-        };
-
-        if (!editing || password !== '') {
-            payload.password = password;
-        }
-
-        saving = true;
-        saveButton.disabled = true;
-
-        try {
-            const data = await apiRequest(
-                '/api/admin/staff',
-                'POST',
-                payload
-            );
-
-            resetForm();
-
-            showMessage(
-                data.message || 'スタッフ情報を保存しました。',
-                'success'
-            );
-
-            await loadStaffs();
-
-        } catch (error) {
-            showMessage(error.message, 'danger');
-
-        } finally {
-            saving = false;
-            saveButton.disabled = false;
-        }
-    });
-
-    // ========================================
-    // 削除
-    // POST /api/admin/staff/delete
-    // ========================================
-
-    deleteForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-
-        if (deleting) return;
-
-        const staffId = staffIdInput.value.trim();
-
-        if (!staffId) {
-            showMessage(
-                '削除対象のスタッフIDがありません。',
-                'warning'
-            );
-            return;
-        }
-
-        const confirmed = window.confirm(
-            `スタッフID「${staffId}」を削除しますか？`
-        );
-
-        if (!confirmed) return;
-
-        deleting = true;
-        deleteButton.disabled = true;
-
-        try {
-            const data = await apiRequest(
-                '/api/admin/staff/delete',
-                'POST',
-                {
-                    staffId: staffId
-                }
-            );
-
-            resetForm();
-
-            showMessage(
-                data.message || 'スタッフを削除しました。',
-                'success'
-            );
-
-            await loadStaffs();
-
-        } catch (error) {
-            showMessage(error.message, 'danger');
-
-        } finally {
-            deleting = false;
-            deleteButton.disabled = false;
-        }
-    });
-
-    // ========================================
-    // キャンセル
-    // ========================================
-
-    cancelButton.addEventListener('click', () => {
-        resetForm();
-    });
-
-    // ========================================
-    // 初期表示
-    // ========================================
-
-    resetForm();
-
-    loadStores();
-    loadStaffs();
-
-})();
-</script>
+    <!-- CSRFトークンの自動埋め込み -->
+    <?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/fetch_csrf_token.php'; ?>
 
 </body>
 </html>
