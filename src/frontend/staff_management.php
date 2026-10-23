@@ -80,6 +80,7 @@
 
             <div class="card-body">
                 <form id="staffForm">
+
                     <!-- CSRFトークン -->
                     <input type="hidden" class="csrf_token" name="csrf_token" value="">
 
@@ -115,15 +116,17 @@
                     <div class="mb-3">
                         <label for="staffPassword" class="form-label">
                             パスワード
+                            <span class="text-danger" id="passwordRequiredMark">*</span>
                         </label>
                         <input
                             type="password"
                             class="form-control"
                             id="staffPassword"
                             name="password"
-                            autocomplete="new-password">
-                        <div class="form-text">
-                            編集時に変更しない場合は空欄にしてください。
+                            autocomplete="new-password"
+                            required>
+                        <div class="form-text" id="passwordHelp">
+                            新規登録時はパスワードが必須です。
                         </div>
                     </div>
 
@@ -199,6 +202,7 @@
                             キャンセル
                         </button>
                     </div>
+
                 </form>
             </div>
         </section>
@@ -225,7 +229,7 @@
                             required>
                     </div>
 
-                    <button type="submit" class="btn btn-danger">
+                    <button type="submit" class="btn btn-danger" id="deleteStaffBtn">
                         スタッフを削除
                     </button>
                 </form>
@@ -271,16 +275,17 @@
         // 結果メッセージを表示
         function renderResult(data) {
             const resultDiv = document.getElementById('result');
-
             resultDiv.replaceChildren();
 
             const alertDiv = document.createElement('div');
-            alertDiv.className = data.success
+            alertDiv.className = data.success === true
                 ? 'alert alert-success'
                 : 'alert alert-danger';
 
             alertDiv.textContent = data.message || (
-                data.success ? '処理が完了しました。' : '処理に失敗しました。'
+                data.success === true
+                    ? '処理が完了しました。'
+                    : '処理に失敗しました。'
             );
 
             resultDiv.appendChild(alertDiv);
@@ -295,8 +300,7 @@
             return document.querySelector('.csrf_token').value;
         }
 
-        // 指定されたデータをAPIへ送信
-        // fetchの形式は提示されたテンプレートに合わせる
+        // API通信
         function callApi(requestData) {
             const csrf_token = getCsrfToken();
 
@@ -315,6 +319,7 @@
                 if (!response.ok) {
                     throw new Error('通信に失敗しました。');
                 }
+
                 return response.json();
             });
         }
@@ -350,8 +355,11 @@
                 roleTd.textContent = roleNames[staff.role] || staff.role;
 
                 const storeTd = document.createElement('td');
+
                 const staffStores = stores
-                    .filter(store => (staff.storeIds || []).includes(store.id))
+                    .filter(store =>
+                        (staff.storeIds || []).includes(String(store.id))
+                    )
                     .map(store => store.name);
 
                 storeTd.textContent = staffStores.length > 0
@@ -366,14 +374,18 @@
                 editButton.type = 'button';
                 editButton.className = 'btn btn-sm btn-warning';
                 editButton.textContent = '編集';
-                editButton.addEventListener('click', () => editStaff(staff.staffId));
+                editButton.addEventListener('click', () => {
+                    editStaff(staff.staffId);
+                });
 
                 const deleteButton = document.createElement('button');
                 deleteButton.type = 'button';
                 deleteButton.className = 'btn btn-sm btn-danger';
                 deleteButton.textContent = '削除';
                 deleteButton.addEventListener('click', () => {
-                    document.getElementById('deleteStaffId').value = staff.staffId;
+                    document.getElementById('deleteStaffId').value =
+                        staff.staffId;
+
                     document.getElementById('deleteStaffId').focus();
                 });
 
@@ -389,6 +401,8 @@
         function renderStoreCheckboxes(selectedStoreIds = []) {
             const container = document.getElementById('storeCheckboxes');
             container.replaceChildren();
+
+            const normalizedSelectedIds = selectedStoreIds.map(String);
 
             if (stores.length === 0) {
                 const p = document.createElement('p');
@@ -406,8 +420,9 @@
                 checkbox.type = 'checkbox';
                 checkbox.className = 'form-check-input store-checkbox';
                 checkbox.id = `store-${store.id}`;
-                checkbox.value = store.id;
-                checkbox.checked = selectedStoreIds.includes(store.id);
+                checkbox.value = String(store.id);
+                checkbox.checked =
+                    normalizedSelectedIds.includes(String(store.id));
 
                 const label = document.createElement('label');
                 label.className = 'form-check-label';
@@ -426,19 +441,38 @@
             ).map(checkbox => checkbox.value);
         }
 
+        // パスワード必須状態を切り替える
+        function setPasswordRequirement(isEditing) {
+            const passwordInput = document.getElementById('staffPassword');
+            const requiredMark = document.getElementById('passwordRequiredMark');
+            const passwordHelp = document.getElementById('passwordHelp');
+
+            passwordInput.required = !isEditing;
+            requiredMark.classList.toggle('d-none', isEditing);
+
+            passwordHelp.textContent = isEditing
+                ? 'パスワードを変更しない場合は空欄にしてください。'
+                : '新規登録時はパスワードが必須です。';
+        }
+
         // フォームを初期状態に戻す
         function resetForm() {
             document.getElementById('staffForm').reset();
+
             document.getElementById('originalStaffId').value = '';
             document.getElementById('staffId').disabled = false;
+
             document.getElementById('formTitle').textContent = 'スタッフ登録';
             document.getElementById('saveStaffBtn').textContent = '登録する';
+
+            setPasswordRequirement(false);
             renderStoreCheckboxes();
         }
 
         // 新規登録フォームを表示
         document.getElementById('newStaffBtn').addEventListener('click', () => {
             resetForm();
+
             document.getElementById('staffFormSection').scrollIntoView({
                 behavior: 'smooth'
             });
@@ -475,6 +509,9 @@
             document.getElementById('formTitle').textContent = 'スタッフ編集';
             document.getElementById('saveStaffBtn').textContent = '更新する';
 
+            // 編集時はパスワードを必須にしない
+            setPasswordRequirement(true);
+
             document.getElementById('staffFormSection').scrollIntoView({
                 behavior: 'smooth'
             });
@@ -487,12 +524,23 @@
             const originalStaffId =
                 document.getElementById('originalStaffId').value;
 
-            const staffId = document.getElementById('staffId').value.trim();
-            const name = document.getElementById('staffName').value.trim();
-            const password = document.getElementById('staffPassword').value;
-            const role = document.querySelector('input[name="role"]:checked')?.value;
+            const staffId =
+                document.getElementById('staffId').value.trim();
+
+            const name =
+                document.getElementById('staffName').value.trim();
+
+            const password =
+                document.getElementById('staffPassword').value;
+
+            const role =
+                document.querySelector('input[name="role"]:checked')?.value;
+
             const storeIds = getSelectedStoreIds();
 
+            const isEditing = originalStaffId !== '';
+
+            // 必須項目チェック
             if (!staffId || !name || !role) {
                 renderResult({
                     success: false,
@@ -501,7 +549,31 @@
                 return;
             }
 
-            const isEditing = originalStaffId !== '';
+            // 新規登録時はパスワード必須
+            if (!isEditing && password.trim() === '') {
+                renderResult({
+                    success: false,
+                    message: '新規登録時はパスワードを入力してください。'
+                });
+
+                document.getElementById('staffPassword').focus();
+                return;
+            }
+
+            // 新規登録時のスタッフID重複チェック
+            if (!isEditing) {
+                const exists = staffs.some(
+                    staff => staff.staffId === staffId
+                );
+
+                if (exists) {
+                    renderResult({
+                        success: false,
+                        message: 'このスタッフIDはすでに登録されています。'
+                    });
+                    return;
+                }
+            }
 
             const requestData = {
                 action: isEditing ? 'update_staff' : 'create_staff',
@@ -512,40 +584,52 @@
                 storeIds
             };
 
-            if (password) {
+            // パスワードが入力されている場合だけ送信
+            if (password !== '') {
                 requestData.password = password;
             }
 
+            const saveButton = document.getElementById('saveStaffBtn');
+            saveButton.disabled = true;
+
             callApi(requestData)
                 .then(data => {
-                    // モックとして画面上の一覧も更新
+                    // APIが成功を明示していない場合は画面を更新しない
+                    if (!data || data.success !== true) {
+                        renderResult({
+                            success: false,
+                            message: data?.message ||
+                                '登録・更新に失敗しました。画面の情報は変更していません。'
+                        });
+                        return;
+                    }
+
+                    // API成功後にだけローカル状態を更新
                     if (isEditing) {
                         staffs = staffs.map(staff =>
                             staff.staffId === originalStaffId
-                                ? { staffId, name, role, storeIds }
+                                ? {
+                                    staffId,
+                                    name,
+                                    role,
+                                    storeIds
+                                }
                                 : staff
                         );
                     } else {
-                        const exists = staffs.some(
-                            staff => staff.staffId === staffId
-                        );
-
-                        if (exists) {
-                            renderResult({
-                                success: false,
-                                message: 'このスタッフIDはすでに登録されています。'
-                            });
-                            return;
-                        }
-
-                        staffs.push({ staffId, name, role, storeIds });
+                        staffs.push({
+                            staffId,
+                            name,
+                            role,
+                            storeIds
+                        });
                     }
 
                     renderStaffs();
                     resetForm();
 
                     renderResult({
-                        success: data.success !== false,
+                        success: true,
                         message: data.message || (
                             isEditing
                                 ? 'スタッフ情報を更新しました。'
@@ -556,10 +640,15 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
+
                     renderResult({
                         success: false,
-                        message: '通信エラーが発生しました。'
+                        message: error.message ||
+                            '通信エラーが発生しました。画面の情報は変更していません。'
                     });
+                })
+                .finally(() => {
+                    saveButton.disabled = false;
                 });
         });
 
@@ -570,7 +659,8 @@
         document.getElementById('deleteForm').addEventListener('submit', function(event) {
             event.preventDefault();
 
-            const staffId = document.getElementById('deleteStaffId').value.trim();
+            const staffId =
+                document.getElementById('deleteStaffId').value.trim();
 
             if (!staffId) {
                 renderResult({
@@ -594,32 +684,60 @@
                 return;
             }
 
+            const deleteButton = document.getElementById('deleteStaffBtn');
+            deleteButton.disabled = true;
+
             callApi({
                 action: 'delete_staff',
                 staffId
             })
             .then(data => {
+                // APIが成功を明示していない場合は削除しない
+                if (!data || data.success !== true) {
+                    renderResult({
+                        success: false,
+                        message: data?.message ||
+                            'スタッフの削除に失敗しました。画面の情報は変更していません。'
+                    });
+                    return;
+                }
+
+                // API成功後にだけローカル状態から削除
                 staffs = staffs.filter(item => item.staffId !== staffId);
 
                 renderStaffs();
+
                 document.getElementById('deleteForm').reset();
 
+                // 削除したスタッフを編集中だった場合はフォームをリセット
+                if (
+                    document.getElementById('originalStaffId').value === staffId
+                ) {
+                    resetForm();
+                }
+
                 renderResult({
-                    success: data.success !== false,
+                    success: true,
                     message: data.message || 'スタッフを削除しました。',
                     data: data.data
                 });
             })
             .catch(error => {
                 console.error('Error:', error);
+
                 renderResult({
                     success: false,
-                    message: '通信エラーが発生しました。'
+                    message: error.message ||
+                        '通信エラーが発生しました。画面の情報は変更していません。'
                 });
+            })
+            .finally(() => {
+                deleteButton.disabled = false;
             });
         });
 
         // 初期表示
+        setPasswordRequirement(false);
         renderStoreCheckboxes();
         renderStaffs();
     </script>
