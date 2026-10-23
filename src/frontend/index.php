@@ -22,250 +22,17 @@
     <link rel="icon" href="/assets/favicon.ico">
     <link rel="stylesheet" href="/lib/bootstrap-5.3.8-dist/css/bootstrap.min.css">
     <style>
-        :root {
-            --cfms-primary: #2457a7;
-            --cfms-background: #f4f7fb;
-            --cfms-card-radius: 1rem;
-        }
-
-        body {
-            background: var(--cfms-background);
-            color: #202938;
-            -webkit-text-size-adjust: 100%;
-        }
-
-        .navbar-cfms { background: var(--cfms-primary); }
-        .page-container { max-width: 1080px; }
-
-        .summary-card {
-            border: 0;
-            border-radius: var(--cfms-card-radius);
-            box-shadow: 0 0.25rem 1rem rgb(20 40 80 / 7%);
-            min-width: 0;
-        }
-
-        .point-value {
-            color: var(--cfms-primary);
-            font-size: clamp(2rem, 5vw, 3rem);
-            font-weight: 800;
-            line-height: 1.2;
-            letter-spacing: -.04em;
-            overflow-wrap: anywhere;
-        }
-
-        .token-value {
-            overflow-wrap: anywhere;
-            word-break: break-word;
-            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        }
-
-        #qrCode {
-            display: flex;
-            min-height: 180px;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #qrCode img,
-        #qrCode canvas {
-            display: block;
-            max-width: 100%;
-            height: auto;
-        }
-
-        .history-table th,
-        .history-table td {
-            vertical-align: middle;
-            white-space: nowrap;
-        }
-
+        body { -webkit-text-size-adjust: 100%; }
+        #qrCode img, #qrCode canvas { display: block; max-width: 100%; height: auto; }
+        #userToken { overflow-wrap: anywhere; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .history-table th, .history-table td { vertical-align: middle; }
         .btn { touch-action: manipulation; }
-        .loading-overlay { opacity: .65; pointer-events: none; }
-
-        /* スマートフォン向け */
-        @media (max-width: 767.98px) {
-            .navbar .container {
-                min-height: 56px;
-                padding-left: 16px;
-                padding-right: 16px;
-            }
-
-            .navbar-brand { font-size: 1.2rem; }
-            .navbar-text { font-size: .8rem; }
-
-            main.page-container {
-                padding: 1rem 12px 1.5rem !important;
-            }
-
-            main > .d-flex:first-child {
-                align-items: flex-start !important;
-                margin-bottom: 1rem !important;
-            }
-
-            main > .d-flex:first-child h1 {
-                font-size: 1.45rem;
-            }
-
-            #accountStatus {
-                flex-shrink: 0;
-                margin-top: 3px;
-                font-size: .7rem;
-            }
-
-            .summary-card {
-                border-radius: 16px;
-                margin-bottom: 0;
-            }
-
-            .summary-card .card-body {
-                padding: 1rem !important;
-            }
-
-            #userContent > .row {
-                --bs-gutter-x: .75rem;
-                --bs-gutter-y: .75rem;
-                margin-bottom: .75rem !important;
-            }
-
-            #userContent .card h2 {
-                font-size: 1rem;
-            }
-
-            /* ポイントを最初に、ひと目で見える大きさで表示 */
-            #totalScore {
-                font-size: 2.6rem;
-            }
-
-            .point-value .fs-5 {
-                font-size: 1rem !important;
-            }
-
-            /* QRコードは中央に大きく配置し、提示しやすくする */
-            #qrCode {
-                min-height: 210px;
-                padding: 1rem !important;
-                border-radius: 14px !important;
-            }
-
-            #qrCode img,
-            #qrCode canvas {
-                width: min(210px, 100%) !important;
-                height: auto !important;
-            }
-
-            #userToken {
-                font-size: .75rem !important;
-                line-height: 1.5;
-            }
-
-            #copyTokenButton,
-            #generateButton,
-            #refreshButton {
-                min-height: 44px;
-            }
-
-            #copyTokenButton {
-                width: 100%;
-            }
-
-            /* 詳細情報はラベルと値の間隔を詰めて読みやすく */
-            #userContent dl.row {
-                --bs-gutter-x: .5rem;
-                --bs-gutter-y: .35rem;
-                font-size: .875rem;
-            }
-
-            #userContent dl.row dt,
-            #userContent dl.row dd {
-                margin-bottom: .25rem;
-                overflow-wrap: anywhere;
-            }
-
-            /* 履歴は横スクロール表ではなく、1件ずつのカード表示 */
-            .history-table thead {
-                display: none;
-            }
-
-            .history-table,
-            .history-table tbody,
-            .history-table tr,
-            .history-table td {
-                display: block;
-                width: 100%;
-            }
-
-            .history-table tbody tr {
-                padding: .75rem 0;
-                border-bottom: 1px solid #e9edf4;
-            }
-
-            .history-table tbody tr:last-child {
-                border-bottom: 0;
-            }
-
-            .history-table tbody td {
-                display: flex;
-                align-items: baseline;
-                justify-content: space-between;
-                gap: 12px;
-                padding: .25rem 0;
-                border: 0;
-                white-space: normal;
-                text-align: right !important;
-                font-size: .8rem;
-                overflow-wrap: anywhere;
-            }
-
-            .history-table tbody td::before {
-                content: attr(data-label);
-                flex: 0 0 auto;
-                color: #6c757d;
-                font-size: .75rem;
-                text-align: left;
-            }
-
-            .history-table tbody td[colspan] {
-                display: block;
-                text-align: center !important;
-                padding: 1rem .25rem;
-            }
-
-            .history-table tbody td[colspan]::before {
-                content: none;
-            }
-
-            #finishedNotice {
-                font-size: .875rem;
-                border-radius: 12px;
-            }
-
-            #generateSection .card-body {
-                padding: 1.25rem !important;
-            }
-
-            #generateButton {
-                width: 100%;
-                white-space: normal;
-            }
-        }
-
-        @media (max-width: 380px) {
-            .navbar-text { max-width: 145px; white-space: normal; text-align: right; line-height: 1.2; }
-            main > .d-flex:first-child h1 { font-size: 1.3rem; }
-            #totalScore { font-size: 2.25rem; }
-            .history-table tbody td { gap: 8px; }
-        }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark navbar-cfms">
-        <div class="container page-container">
-            <a class="navbar-brand fw-bold" href="/index.php">CFMS</a>
-            <span class="navbar-text text-white">ユーザーメインページ</span>
-        </div>
-    </nav>
 
-    <main class="container page-container py-4 py-md-5">
+
+    <main class="container py-3 py-md-5">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
             <div>
                 <h1 class="h3 fw-bold mb-1">マイページ</h1>
@@ -276,7 +43,7 @@
 
         <div id="alertArea" class="mb-3" aria-live="polite"></div>
 
-        <section id="generateSection" class="card summary-card mb-4 d-none">
+        <section id="generateSection" class="card border-0 shadow-sm rounded-4 mb-4 d-none">
             <div class="card-body p-4 text-center">
                 <h2 class="h5 fw-bold">ユーザー登録</h2>
                 <p class="text-secondary">まだユーザー情報がありません。ユーザー情報を発行してください。</p>
@@ -289,16 +56,16 @@
         <section id="userContent" class="d-none">
             <div class="row g-4 mb-4">
                 <div class="col-12 col-lg-7">
-                    <div class="card summary-card h-100">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
                         <div class="card-body p-4">
                             <h2 class="h5 fw-bold mb-3">所持ポイント</h2>
-                            <div class="point-value"><span id="totalScore">0</span><span class="fs-5 ms-2">pt</span></div>
+                            <div class="fs-1 fw-bold text-primary lh-sm"><span id="totalScore">0</span><span class="fs-5 ms-2">pt</span></div>
                             <p class="text-secondary small mt-2 mb-0">これまでに獲得したポイントの合計です。</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-12 col-lg-5">
-                    <div class="card summary-card h-100">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
                         <div class="card-body p-4">
                             <h2 class="h5 fw-bold mb-3">ユーザー情報</h2>
                             <dl class="row mb-0">
@@ -316,23 +83,20 @@
 
             <div class="row g-4 mb-4">
                 <div class="col-12 col-md-5">
-                    <div class="card summary-card h-100">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
                         <div class="card-body p-4">
                             <h2 class="h5 fw-bold mb-3">受付用QRコード</h2>
                             <p class="small text-secondary">スタッフに提示してください。QRコードにはユーザー識別用トークンが含まれます。</p>
-                            <div id="qrCode" class="border rounded bg-white p-3 mb-3">
+                            <div id="qrCode" class="d-flex align-items-center justify-content-center border rounded-3 bg-white p-3 mb-3">
                                 <span class="text-secondary small">QRコードを準備しています...</span>
                             </div>
                             <div class="small text-secondary mb-1">トークン</div>
                             <div id="userToken" class="token-value border rounded bg-light p-2 small">-</div>
-                            <button id="copyTokenButton" class="btn btn-outline-primary btn-sm mt-2" type="button">
-                                トークンをコピー
-                            </button>
                         </div>
                     </div>
                 </div>
                 <div class="col-12 col-md-7">
-                    <div class="card summary-card h-100">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
                         <div class="card-body p-4">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                                 <h2 class="h5 fw-bold mb-0">ポイント獲得履歴</h2>
@@ -341,7 +105,7 @@
                                 </button>
                             </div>
                             <div class="table-responsive">
-                                <table class="table table-hover history-table mb-0">
+                                <table class="table table-hover align-middle mb-0">
                                     <thead class="table-light">
                                         <tr>
                                             <th scope="col">日時</th>
@@ -372,12 +136,20 @@
          QRCode.jsを /lib/qrcode.min.js に配置してください。
          ライブラリがない場合もトークン文字列は表示されます。 -->
     <script src="/lib/qrcode.min.js"></script>
+
+    <!-- template.phpと同じCSRF自動埋め込み方式 -->
+    <input type="hidden" class="csrf_token" name="csrf_token" value="">
+    <?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/fetch_csrf_token.php'; ?>
+
     <script>
+        (() => {
         // CommentAnchor: API_SETTINGS
         // API_URLは環境変数で設定します。未設定の場合は同一オリジンを使用します。
         const API_BASE_URL = <?= json_encode(rtrim((string) (getenv('API_URL') ?: ''), '/'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
         const API_ENDPOINTS = {
-            csrfToken: '/api/auth/fetch_csrf_token.php'
+            generate: '/api/user/generate',
+            info: '/api/user/info',
+            heartbeat: '/api/user/heartbeat'
         };
 
         let csrfToken = '';
@@ -399,26 +171,27 @@
                 }
             });
 
-            if (!response.ok) {
-                let errorMessage = `通信に失敗しました（HTTP ${response.status}）。`;
+            // 先にテキストとして取得し、JSON以外のエラーページでもHTTPステータスを保持します。
+            const responseText = await response.text();
+            let responseData = null;
+            if (responseText) {
                 try {
-                    const errorData = await response.json();
-                    if (errorData && errorData.message) {
-                        errorMessage = errorData.message;
+                    responseData = JSON.parse(responseText);
+                } catch (error) {
+                    if (!response.ok) {
+                        throw new Error(`通信に失敗しました（HTTP ${response.status}）。`);
                     }
-                } catch (_) {}
-                throw new Error(errorMessage);
+                    throw new Error(`サーバーから正しいJSONレスポンスを受信できませんでした（HTTP ${response.status}）。`);
+                }
             }
 
-            let responseData;
-            try {
-                responseData = await response.json();
-            } catch (error) {
-                throw new Error('サーバーから正しいJSONレスポンスを受信できませんでした。');
+            if (!response.ok || responseData?.success === false) {
+                const message = responseData?.message;
+                throw new Error(message || `通信に失敗しました（HTTP ${response.status}）。`);
             }
 
-            if (responseData.success === false) {
-                throw new Error(responseData.message || '処理に失敗しました。');
+            if (responseData === null) {
+                throw new Error(`サーバーから空のレスポンスを受信しました（HTTP ${response.status}）。`);
             }
 
             return responseData.data ?? responseData;
@@ -426,17 +199,21 @@
 
         /**
          * CommentAnchor: CSRF_TOKEN
-         * CSRFトークン取得エンドポイントのレスポンス形式に合わせて値を取得します。
+         * template.phpと同じ方式で、fetch_csrf_token.phpが埋め込むhiddenフィールドから取得します。
+         * CSRF取得用コンポーネントはこのスクリプトより前にincludeし、初期化時に値を読み取ります。
          */
         async function loadCsrfToken() {
-            const tokenData = await requestApi(API_ENDPOINTS.csrfToken, {
-                method: 'POST',
-                headers: {}
-            });
+            // コンポーネント側がDOMContentLoadedで値を埋め込む実装にも対応します。
+            if (document.readyState === 'loading') {
+                await new Promise((resolve) => {
+                    document.addEventListener('DOMContentLoaded', resolve, { once: true });
+                });
+            }
 
-            csrfToken = tokenData.csrf_token || tokenData.csrfToken || '';
+            const csrfInput = document.querySelector('.csrf_token');
+            csrfToken = csrfInput?.value?.trim() || '';
             if (!csrfToken) {
-                throw new Error('CSRFトークンを取得できませんでした。');
+                throw new Error('CSRFトークンを取得できませんでした。fetch_csrf_token.phpの埋め込み処理を確認してください。');
             }
         }
 
@@ -581,8 +358,6 @@
                 userState.textContent = '未有効化';
                 document.getElementById('finishedNotice').classList.add('d-none');
             }
-
-            document.getElementById('copyTokenButton').disabled = !currentUserToken;
             renderHistory(userInfo.scores || []);
         }
 
@@ -664,31 +439,13 @@
         document.getElementById('refreshButton').addEventListener('click', async () => {
             const button = document.getElementById('refreshButton');
             setBusy(button, true, '更新中...');
-            if (!navigator.clipboard) {
-                showAlert('コピーできませんでした。トークンを選択してコピーしてください。', 'warning');
-                return;
-            }
-
             try {
-                await navigator.clipboard.writeText(currentUserToken);
-                showAlert('トークンをコピーしました。', 'success');
+                await loadUserInfo();
+                showAlert('情報を更新しました。', 'success');
             } catch (error) {
-                showAlert('コピーできませんでした。トークンを選択してコピーしてください。', 'warning');
-            }finally {
+                showAlert(error.message || '情報の更新に失敗しました。');
+            } finally {
                 setBusy(button, false);
-            }
-        });
-
-        document.getElementById('copyTokenButton').addEventListener('click', async () => {
-            if (!currentUserToken) {
-                return;
-            }
-
-            try {
-                await navigator.clipboard.writeText(currentUserToken);
-                showAlert('トークンをコピーしました。', 'success');
-            } catch (error) {
-                showAlert('コピーできませんでした。トークンを選択してコピーしてください。', 'warning');
             }
         });
 
@@ -699,6 +456,7 @@
         });
 
         initializePage();
+        })();
     </script>
 </body>
 </html>
