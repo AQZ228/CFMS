@@ -203,25 +203,31 @@
          * CSRF取得用コンポーネントはこのスクリプトより前にincludeし、初期化時に値を読み取ります。
          */
 
-    async function loadCsrfToken() {
+async function loadCsrfToken() {
+    // DOMの解析完了を待機します。
+    if (document.readyState === 'loading') {
+        await new Promise((resolve) => {
+            document.addEventListener('DOMContentLoaded', resolve, { once: true });
+        });
+    }
+
+    // CSRFトークンの非同期埋め込みを最大5秒間待機します。
     const maxAttempts = 50;
     const interval = 100;
 
     for (let i = 0; i < maxAttempts; i++) {
         const csrfInput = document.querySelector('.csrf_token');
-        const token = csrfInput?.value?.trim() || '';
+        csrfToken = csrfInput?.value?.trim() || '';
 
-        if (token) {
-            csrfToken = token;
-            return csrfToken;
+        if (csrfToken) {
+            return;
         }
 
         await new Promise((resolve) => setTimeout(resolve, interval));
     }
 
     throw new Error(
-        'CSRFトークンを取得できませんでした。' +
-        'fetch_csrf_token.phpの埋め込み処理を確認してください。'
+        'CSRFトークンを取得できませんでした。fetch_csrf_token.phpの埋め込み処理を確認してください。'
     );
 }
 
@@ -432,16 +438,17 @@
             }
         }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await loadCsrfToken();
-
-        // CSRFトークンが取得できた後に初期化する
-        await initializePage();
-    } catch (error) {
-        console.error('ページの初期化に失敗しました:', error);
-    }
-});
+        async function initializePage() {
+            try {
+                await loadCsrfToken();
+                await loadUserInfo();
+                await sendHeartbeat();
+                heartbeatTimer = window.setInterval(sendHeartbeat, 60 * 1000);
+            } catch (error) {
+                showAlert(error.message || 'ページの初期化に失敗しました。');
+                document.getElementById('accountStatus').textContent = '取得失敗';
+            }
+        }
 
         document.getElementById('generateButton').addEventListener('click', generateUser);
         document.getElementById('refreshButton').addEventListener('click', async () => {
