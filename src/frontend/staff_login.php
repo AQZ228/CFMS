@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 
@@ -203,13 +202,11 @@
         const checkSessionButton = document.getElementById('checkSessionButton');
 
         // ==============================
-        // モック用の定数
-        // 実際の認証ではサーバー側で認証する
+        // API設定
         // ==============================
 
-        const MOCK_STAFF_ID = 'staff001';
-        const MOCK_PASSWORD = 'demo1234';
-        const SESSION_KEY = 'cfmsMockStaff';
+        const LOGIN_API_URL = '/api/staff/login';
+        const SESSION_API_URL = '/api/staff/isLoggedIn';
 
         let loggingIn = false;
         let checkingSession = false;
@@ -254,51 +251,33 @@
         }
 
         // ==============================
-        // モックAPI：ログイン処理
+        // API：ログイン処理
         // ==============================
 
         /**
-         * スタッフのログインを模擬する
-         * 注意：この関数はデモ専用で、実際の認証には使用しない
+         * スタッフログインAPIを呼び出す
+         * @param {Object} payload ログイン情報
+         * @returns {Promise<Object>} APIレスポンス
          */
-        async function mockLoginApi(payload) {
-            // 通信時間を模擬する
-            await new Promise(resolve => setTimeout(resolve, 300));
+        async function loginApi(payload) {
+            const response = await fetch(LOGIN_API_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
 
-            if (!payload.csrfToken) {
-                return {
-                    success: false,
-                    message: 'CSRFトークンを取得できません。'
-                };
-            }
+            const result = await response.json();
 
-            // デモ用の固定ID・パスワードを照合する
-            if (
-                payload.staffId === MOCK_STAFF_ID &&
-                payload.password === MOCK_PASSWORD
-            ) {
-                const staff = {
-                    staffId: MOCK_STAFF_ID,
-                    displayName: 'デモスタッフ',
-                    role: 'staff'
-                };
-
-                sessionStorage.setItem(
-                    SESSION_KEY,
-                    JSON.stringify(staff)
+            if (!result || typeof result !== 'object') {
+                throw new Error(
+                    'サーバーから正しいレスポンスが返されませんでした。'
                 );
-
-                return {
-                    success: true,
-                    message: 'ログインに成功しました。',
-                    staff: staff
-                };
             }
 
-            return {
-                success: false,
-                message: 'スタッフIDまたはパスワードが正しくありません。'
-            };
+            return result;
         }
 
         // ==============================
@@ -344,7 +323,7 @@
             loginButton.textContent = '認証中...';
 
             try {
-                const result = await mockLoginApi({
+                const result = await loginApi({
                     staffId: staffId,
                     password: password,
                     csrfToken: csrfToken
@@ -389,62 +368,32 @@
         });
 
         // ==============================
-        // モックAPI：ログイン状態確認
+        // API：ログイン状態確認
         // ==============================
 
         /**
-         * 保存されたログイン情報を確認する
-         * @returns {Promise<Object>} ログイン状態
+         * サーバーのセッションを確認する
+         * @returns {Promise<Object>} APIレスポンス
          */
-        async function mockIsLoggedInApi() {
-            const storedStaff = sessionStorage.getItem(SESSION_KEY);
+        async function isLoggedInApi() {
+            const response = await fetch(SESSION_API_URL, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
 
-            // 保存データがない場合
-            if (!storedStaff) {
-                return {
-                    success: true,
-                    isLoggedIn: false,
-                    staff: null
-                };
+            const result = await response.json();
+
+            if (!result || typeof result !== 'object') {
+                throw new Error(
+                    'サーバーから正しいレスポンスが返されませんでした。'
+                );
             }
 
-            try {
-                const staff = JSON.parse(storedStaff);
-
-                // null、配列、必要項目のないデータは無効とする
-                if (
-                    staff === null ||
-                    typeof staff !== 'object' ||
-                    Array.isArray(staff) ||
-                    typeof staff.staffId !== 'string' ||
-                    typeof staff.displayName !== 'string' ||
-                    typeof staff.role !== 'string'
-                ) {
-                    sessionStorage.removeItem(SESSION_KEY);
-
-                    return {
-                        success: true,
-                        isLoggedIn: false,
-                        staff: null
-                    };
-                }
-
-                return {
-                    success: true,
-                    isLoggedIn: true,
-                    staff: staff
-                };
-
-            } catch (error) {
-                // JSONの形式が壊れている場合は削除する
-                sessionStorage.removeItem(SESSION_KEY);
-
-                return {
-                    success: true,
-                    isLoggedIn: false,
-                    staff: null
-                };
-            }
+            return result;
         }
 
         // ==============================
@@ -461,17 +410,26 @@
             clearMessage();
 
             try {
-                const result = await mockIsLoggedInApi();
+                const result = await isLoggedInApi();
 
-                if (result.isLoggedIn && result.staff) {
+                if (
+                    result.success === true &&
+                    result.data?.isLoggedIn === true &&
+                    result.data.staff
+                ) {
                     showMessage(
-                        'ログイン中です：' + result.staff.displayName,
+                        'ログイン中です：' + result.data.staff.displayName,
                         'success'
                     );
-                } else {
+                } else if (result.success === true) {
                     showMessage(
                         '現在ログインしていません。',
                         'info'
+                    );
+                } else {
+                    showMessage(
+                        result.message || 'ログイン状態の確認に失敗しました。',
+                        'danger'
                     );
                 }
 
