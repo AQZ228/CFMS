@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 
@@ -309,15 +308,15 @@
             }
 
             // レスポンスの形式を確認
+            // dataは空配列などの配列でも許容する
             if (
                 !result ||
                 typeof result !== 'object' ||
                 Array.isArray(result) ||
                 typeof result.success !== 'boolean' ||
                 typeof result.message !== 'string' ||
-                !result.data ||
-                typeof result.data !== 'object' ||
-                Array.isArray(result.data)
+                result.data === null ||
+                typeof result.data !== 'object'
             ) {
                 throw new Error(
                     `サーバーから正しいレスポンスが返されませんでした。(HTTP ${response.status})`
@@ -414,9 +413,10 @@
                 }
 
                 // HTTPステータスとAPIのsuccessを確認
-                if (!response.status.toString().startsWith('2') ||
-                    result.success !== true) {
-
+                if (
+                    !response.status.toString().startsWith('2') ||
+                    result.success !== true
+                ) {
                     showMessage(
                         result.message || 'ログインに失敗しました。',
                         'danger'
