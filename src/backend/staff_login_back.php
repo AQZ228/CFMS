@@ -37,6 +37,9 @@ header("Access-Control-Allow-Credentials: true");
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/vendor/autoload.php';
 
+/**
+ * JSONレスポンスを返して処理を終了します。
+ */
 function sendLoginResponse(
     bool $success,
     string $message,
@@ -169,10 +172,8 @@ try {
     $staff = $stmt->fetch(PDO::FETCH_ASSOC);
 
     /*
-     * ユーザーが存在しない場合にも password_verify() を実行し、
-     * スタッフIDの有無による応答時間の差を抑えます。
-     *
-     * このダミーハッシュは実在するスタッフの認証には使用しません。
+     * スタッフが存在しない場合もパスワード検証を実行し、
+     * 応答時間の差を抑えます。
      */
     $dummyPasswordHash =
         '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.he5eXk7p1e';
@@ -185,17 +186,22 @@ try {
         ? $staff['password']
         : $dummyPasswordHash;
 
-    // スタッフが存在しなくても必ずパスワード検証を実行
     $passwordVerified = password_verify(
         $password,
         $passwordHash
     );
 
+    // ログイン失敗時もCSRFトークンを更新
     if (!$staff || !$passwordVerified) {
+        $csrf->clearToken();
+        $newCsrfToken = $csrf->generateToken();
+
         sendLoginResponse(
             false,
             "スタッフIDまたはパスワードが正しくありません。",
-            [],
+            [
+                "csrfToken" => $newCsrfToken
+            ],
             401
         );
     }

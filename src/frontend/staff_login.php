@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 
@@ -26,7 +27,7 @@
     <meta property="og:image:alt" content="CFMS">
     <meta property="og:description" content="CFMSの管理者・スタッフ専用ログインページ">
 
-    <!-- CSRFトークン用 -->
+    <!-- CSRFトークン -->
     <meta name="csrf-token" content="">
 
     <!-- Bootstrap -->
@@ -36,10 +37,9 @@
 
 <body class="bg-light">
 
-    <!-- 画面全体：スマートフォンでも中央に配置 -->
+    <!-- 画面全体 -->
     <main class="container min-vh-100 d-flex justify-content-center align-items-center py-4">
 
-        <!-- ログインカード -->
         <div class="row justify-content-center w-100">
             <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
 
@@ -68,7 +68,6 @@
                             aria-live="polite"
                         ></div>
 
-                        <!-- ログインフォーム -->
                         <form id="loginForm" novalidate>
 
                             <!-- CSRFトークン -->
@@ -201,6 +200,10 @@
         const showPasswordCheckbox = document.getElementById('showPassword');
         const checkSessionButton = document.getElementById('checkSessionButton');
 
+        const csrfTokenMeta = document.querySelector(
+            'meta[name="csrf-token"]'
+        );
+
         // ==============================
         // API設定
         // ==============================
@@ -219,6 +222,7 @@
             statusArea.replaceChildren();
 
             const alertElement = document.createElement('div');
+
             alertElement.className = `alert alert-${type} mb-0`;
             alertElement.setAttribute('role', 'alert');
             alertElement.textContent = message;
@@ -231,23 +235,101 @@
         }
 
         // ==============================
-        // CSRFトークン取得
+        // CSRFトークン管理
         // ==============================
 
+        /**
+         * hidden inputとmetaタグのCSRFトークンを更新する
+         *
+         * @param {string} token 新しいCSRFトークン
+         */
+        function updateCsrfToken(token) {
+            if (typeof token !== 'string' || token === '') {
+                return;
+            }
+
+            csrfTokenInput.value = token;
+
+            if (csrfTokenMeta) {
+                csrfTokenMeta.content = token;
+            }
+        }
+
+        /**
+         * CSRFトークンを取得する
+         *
+         * @returns {string} CSRFトークン
+         */
         function getCsrfToken() {
-            if (csrfTokenInput && csrfTokenInput.value) {
+            if (csrfTokenInput.value) {
                 return csrfTokenInput.value;
             }
 
-            const meta = document.querySelector(
-                'meta[name="csrf-token"]'
-            );
-
-            if (meta && meta.content) {
-                return meta.content;
+            if (csrfTokenMeta && csrfTokenMeta.content) {
+                return csrfTokenMeta.content;
             }
 
             return '';
+        }
+
+        // ==============================
+        // API共通処理
+        // ==============================
+
+        /**
+         * JSON APIを呼び出す
+         *
+         * HTTPエラーのレスポンスでもJSONが返された場合は、
+         * バックエンドのsuccess/message/dataを呼び出し元へ返す。
+         *
+         * @param {string} url APIのURL
+         * @param {Object} options fetchのオプション
+         * @returns {Promise<{result: Object, status: number}>}
+         */
+        async function requestJson(url, options) {
+            const response = await fetch(url, options);
+
+            // JSON以外のレスポンスを確認
+            const contentType = response.headers.get('content-type') || '';
+
+            if (!contentType.toLowerCase().includes('application/json')) {
+                throw new Error(
+                    `サーバーがJSON以外のレスポンスを返しました。(HTTP ${response.status})`
+                );
+            }
+
+            let result;
+
+            try {
+                result = await response.json();
+            } catch (error) {
+                throw new Error(
+                    `サーバーのJSONレスポンスを解析できませんでした。(HTTP ${response.status})`
+                );
+            }
+
+            // レスポンスの形式を確認
+            if (
+                !result ||
+                typeof result !== 'object' ||
+                Array.isArray(result) ||
+                typeof result.success !== 'boolean' ||
+                typeof result.message !== 'string' ||
+                !result.data ||
+                typeof result.data !== 'object' ||
+                Array.isArray(result.data)
+            ) {
+                throw new Error(
+                    `サーバーから正しいレスポンスが返されませんでした。(HTTP ${response.status})`
+                );
+            }
+
+            // HTTPエラーでもJSON形式なら呼び出し元に返す。
+            // 401などのバックエンドメッセージを画面に表示するため。
+            return {
+                result: result,
+                status: response.status
+            };
         }
 
         // ==============================
@@ -256,28 +338,20 @@
 
         /**
          * スタッフログインAPIを呼び出す
+         *
          * @param {Object} payload ログイン情報
-         * @returns {Promise<Object>} APIレスポンス
+         * @returns {Promise<{result: Object, status: number}>}
          */
         async function loginApi(payload) {
-            const response = await fetch(LOGIN_API_URL, {
+            return await requestJson(LOGIN_API_URL, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify(payload)
             });
-
-            const result = await response.json();
-
-            if (!result || typeof result !== 'object') {
-                throw new Error(
-                    'サーバーから正しいレスポンスが返されませんでした。'
-                );
-            }
-
-            return result;
         }
 
         // ==============================
@@ -323,32 +397,66 @@
             loginButton.textContent = '認証中...';
 
             try {
-                const result = await loginApi({
+                const response = await loginApi({
                     staffId: staffId,
                     password: password,
                     csrfToken: csrfToken
                 });
 
-                if (result.success === true) {
-                    showMessage(
-                        'ログインに成功しました。担当店舗の選択へ進みます。',
-                        'success'
-                    );
+                const result = response.result;
 
-                    // 店舗選択画面を実装したら遷移先を設定する
-                    // window.location.href = '/staff/stores';
-                } else {
+                // 成功・失敗にかかわらず、返されたトークンを更新
+                if (
+                    typeof result.data.csrfToken === 'string' &&
+                    result.data.csrfToken !== ''
+                ) {
+                    updateCsrfToken(result.data.csrfToken);
+                }
+
+                // HTTPステータスとAPIのsuccessを確認
+                if (!response.status.toString().startsWith('2') ||
+                    result.success !== true) {
+
                     showMessage(
                         result.message || 'ログインに失敗しました。',
                         'danger'
                     );
+
+                    return;
                 }
+
+                // ログイン成功時のスタッフ情報を確認
+                const staff = result.data.staff;
+
+                if (
+                    !staff ||
+                    typeof staff !== 'object' ||
+                    typeof staff.staffId !== 'string' ||
+                    typeof staff.displayName !== 'string' ||
+                    !['staff', 'admin'].includes(staff.role)
+                ) {
+                    showMessage(
+                        'ログイン情報の形式が正しくありません。',
+                        'danger'
+                    );
+                    return;
+                }
+
+                showMessage(
+                    'ログインに成功しました。担当店舗の選択へ進みます。',
+                    'success'
+                );
+
+                // 店舗選択画面を実装したら遷移先を設定する
+                // window.location.href = '/staff/stores';
 
             } catch (error) {
                 console.error('Login error:', error);
 
                 showMessage(
-                    '処理に失敗しました。もう一度お試しください。',
+                    error instanceof Error
+                        ? error.message
+                        : '処理に失敗しました。もう一度お試しください。',
                     'danger'
                 );
 
@@ -373,27 +481,19 @@
 
         /**
          * サーバーのセッションを確認する
-         * @returns {Promise<Object>} APIレスポンス
+         *
+         * @returns {Promise<{result: Object, status: number}>}
          */
         async function isLoggedInApi() {
-            const response = await fetch(SESSION_API_URL, {
+            return await requestJson(SESSION_API_URL, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({})
             });
-
-            const result = await response.json();
-
-            if (!result || typeof result !== 'object') {
-                throw new Error(
-                    'サーバーから正しいレスポンスが返されませんでした。'
-                );
-            }
-
-            return result;
         }
 
         // ==============================
@@ -407,25 +507,37 @@
 
             checkingSession = true;
             checkSessionButton.disabled = true;
+
             clearMessage();
 
             try {
-                const result = await isLoggedInApi();
+                const response = await isLoggedInApi();
+                const result = response.result;
 
                 if (
+                    response.status >= 200 &&
+                    response.status < 300 &&
                     result.success === true &&
-                    result.data?.isLoggedIn === true &&
-                    result.data.staff
+                    result.data.isLoggedIn === true &&
+                    result.data.staff &&
+                    typeof result.data.staff.displayName === 'string'
                 ) {
                     showMessage(
                         'ログイン中です：' + result.data.staff.displayName,
                         'success'
                     );
-                } else if (result.success === true) {
+
+                } else if (
+                    response.status >= 200 &&
+                    response.status < 300 &&
+                    result.success === true &&
+                    result.data.isLoggedIn === false
+                ) {
                     showMessage(
                         '現在ログインしていません。',
                         'info'
                     );
+
                 } else {
                     showMessage(
                         result.message || 'ログイン状態の確認に失敗しました。',
@@ -437,7 +549,9 @@
                 console.error('Session check error:', error);
 
                 showMessage(
-                    'ログイン状態の確認に失敗しました。',
+                    error instanceof Error
+                        ? error.message
+                        : 'ログイン状態の確認に失敗しました。',
                     'danger'
                 );
 
@@ -462,6 +576,15 @@
                 this.classList.remove('is-invalid');
             }
         });
+
+        // ==============================
+        // 初期CSRFトークンの同期
+        // ==============================
+
+        // fetch_csrf_token.phpが設定したmetaタグの値を利用する
+        if (csrfTokenMeta && csrfTokenMeta.content) {
+            updateCsrfToken(csrfTokenMeta.content);
+        }
 
     })();
     </script>
