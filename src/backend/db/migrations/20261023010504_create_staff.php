@@ -29,7 +29,7 @@ final class CreateStaff extends AbstractMigration
                 'limit' => 255,
             ])
             ->addColumn('role', 'enum', [
-                'values' => ['staff', 'admin', 'reception'],
+                'values' => ['admin', 'reception', 'store', 'prize'],
             ])
             ->create();
     }
