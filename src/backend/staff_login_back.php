@@ -110,11 +110,21 @@ if (
 
 $staffId = trim($staffId);
 
-// マルチバイト文字を正しく数える
+// スタッフIDは100文字以内
 if (mb_strlen($staffId, 'UTF-8') > 100) {
     sendLoginResponse(
         false,
         "スタッフIDは100文字以内で入力してください。",
+        [],
+        400
+    );
+}
+
+// パスワードは256文字以内
+if (mb_strlen($password, 'UTF-8') > 256) {
+    sendLoginResponse(
+        false,
+        "パスワードは256文字以内で入力してください。",
         [],
         400
     );
@@ -131,7 +141,7 @@ try {
     if (!$csrf->validateToken($csrfToken)) {
         sendLoginResponse(
             false,
-            "CSRFトークンが無効です。",
+            "CSRFトークンが無効です。ページを再読み込みしてください。",
             [],
             403
         );
@@ -208,10 +218,16 @@ try {
 
     // 利用可能な権限か確認
     if (!in_array($staff['role'], ['staff', 'admin'], true)) {
+        // 権限エラー時もCSRFトークンを更新
+        $csrf->clearToken();
+        $newCsrfToken = $csrf->generateToken();
+
         sendLoginResponse(
             false,
             "このアカウントは利用できません。",
-            [],
+            [
+                "csrfToken" => $newCsrfToken
+            ],
             403
         );
     }
