@@ -1,6 +1,6 @@
-
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
@@ -31,6 +31,9 @@
 
     <!-- QRコード生成ライブラリ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- csrf_token格納用 -->
+    <input type="hidden" class="csrf_token" value="">
 </head>
 
 <body class="bg-light">
@@ -69,32 +72,17 @@
                 <div class="card-body p-3">
                     <h2 class="h5 fw-bold mb-3">ユーザー情報</h2>
 
-                    <label for="userId" class="form-label fw-bold">
-                        ユーザーID
-                    </label>
-
-                    <div class="input-group mb-3">
-                        <input type="text" id="userId" class="form-control"
-                               value="取得中..." readonly>
-
-                        <button type="button" id="copyUserIdButton"
-                                class="btn btn-outline-secondary"
-                                onclick="copyText('userId')" disabled>
-                            コピー
-                        </button>
-                    </div>
-
                     <label for="token" class="form-label fw-bold">
                         トークン
                     </label>
 
                     <div class="input-group mb-2">
                         <input type="text" id="token" class="form-control"
-                               value="取得中..." readonly>
+                            value="取得中..." readonly>
 
                         <button type="button" id="copyTokenButton"
-                                class="btn btn-outline-secondary"
-                                onclick="copyText('token')" disabled>
+                            class="btn btn-outline-secondary"
+                            onclick="copyText('token')" disabled>
                             コピー
                         </button>
                     </div>
@@ -182,7 +170,7 @@
 
                     <div class="d-grid">
                         <button type="button" class="btn btn-outline-primary"
-                                onclick="showLoginMock()">
+                            onclick="showLoginMock()">
                             再ログイン画面へ
                         </button>
                     </div>
@@ -205,17 +193,17 @@
          * APIのベースURL
          */
         const API_BASE_URL = <?= json_encode(
-            rtrim((string) (getenv('API_URL') ?: ''), '/'),
-            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-        ) ?>;
+                                    rtrim((string) (getenv('API_URL') ?: ''), '/'),
+                                    JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+                                ) ?>;
 
         /**
          * APIエンドポイント
          */
         const API_ENDPOINTS = {
-            info: '/api/user/info',
-            generate: '/api/user/generate',
-            heartbeat: '/api/user/heartbeat'
+            info: '/user/user_info.php',
+            generate: '/user/user_generate.php',
+            heartbeat: '/user/user_heartbeat.php'
         };
 
         // ハートビートの送信間隔：1分
@@ -252,82 +240,89 @@
                 document.querySelector('input[name="csrf_token"]') ||
                 document.querySelector('input.csrf_token');
 
-            return csrfInput ? csrfInput.value : '';
+            return csrfInput && typeof csrfInput.value === 'string' ?
+                csrfInput.value.trim() :
+                '';
         }
 
         /**
-         * APIリクエストを送信する
+         * CSRFトークンがDOMに挿入され、値が設定されるまで待機する。
+         * valueプロパティだけが更新される実装にも対応するため、定期確認します。
+         * @param {number} timeoutMs
+         * @returns {Promise<string>}
+         */
+        function waitForCsrfToken(timeoutMs = 15000) {
+            return new Promise((resolve, reject) => {
+                const startedAt = Date.now();
+                const timer = setInterval(() => {
+                    const csrfToken = getCsrfToken();
+
+                    if (csrfToken !== '') {
+                        clearInterval(timer);
+                        resolve(csrfToken);
+                        return;
+                    }
+
+                    if (Date.now() - startedAt >= timeoutMs) {
+                        clearInterval(timer);
+                        reject(new Error(
+                            'CSRFトークンを取得できませんでした。ページを再読み込みしてください。'
+                        ));
+                    }
+                }, 50);
+            });
+        }
+
+        /**
+         * APIリクエストを送信する。CSRFトークンが取得できるまで送信を開始しません。
          * @param {string} endpoint
-         * @param {string} method
          * @param {Object|null} body
          * @returns {Promise<{response: Response, data: Object}>}
          */
-        async function requestApi(endpoint, method = 'GET', body = null) {
-            const headers = {
-                'Accept': 'application/json'
-            };
-
-            const options = {
-                method: method,
+        async function requestApi(endpoint, body = {}) {
+            const csrfToken = await waitForCsrfToken();
+            const response = await fetch(getApiUrl(endpoint), {
+                method: 'POST',
                 credentials: 'include',
-                headers: headers
-            };
-
-            if (method !== 'GET' && method !== 'HEAD') {
-                headers['Content-Type'] = 'application/json';
-
-                const csrfToken = getCsrfToken();
-
-                if (csrfToken) {
-                    headers['X-CSRF-Token'] = csrfToken;
-                }
-
-                options.body = JSON.stringify({
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
                     ...(body || {}),
                     csrf_token: csrfToken
-                });
-            }
-
-            const response = await fetch(getApiUrl(endpoint), options);
+                })
+            });
 
             const contentType = response.headers.get('content-type') || '';
-
             if (!contentType.includes('application/json')) {
                 const error = new Error(
                     'APIのレスポンスがJSONではありません。'
                 );
-
                 error.status = response.status;
                 throw error;
             }
 
             const data = await response.json();
-
-            if (!response.ok) {
+            if (!response.ok || data.success !== true) {
                 const error = new Error(
                     data.message ||
                     'API通信に失敗しました。HTTP ' + response.status
                 );
-
                 error.status = response.status;
                 error.data = data;
-
                 throw error;
             }
 
             return {
-                response: response,
-                data: data
+                response,
+                data
             };
         }
 
         /**
          * ページを初期化する
-         *
-         * 1. 既存ユーザー情報を取得
-         * 2. 未生成の場合だけユーザーを生成
-         * 3. ユーザー情報とポイント履歴を表示
-         * 4. ハートビートを開始
+         * 生成APIはセッション内の既存ユーザーを返すため、先に呼び出しても重複生成されません。
          */
         async function initializePage() {
             if (isInitializing) {
@@ -337,80 +332,39 @@
             isInitializing = true;
 
             try {
-                let result;
+                // 既存セッションなら既存ユーザーを返し、未生成の場合だけ新規作成します。
+                const generateResult = await requestApi(
+                    API_ENDPOINTS.generate, {}
+                );
+                const generatedUser = generateResult.data.data;
 
-                try {
-                    result = await requestApi(API_ENDPOINTS.info, 'GET');
-                } catch (error) {
-                    // 404の場合のみ未生成として扱う
-                    if (error.status === 404) {
-                        result = null;
-                    } else {
-                        throw error;
-                    }
+                if (
+                    !generatedUser ||
+                    typeof generatedUser.token !== 'string' ||
+                    generatedUser.token.length !== 10
+                ) {
+                    throw new Error('ユーザー生成APIから有効な10文字のトークンを取得できませんでした。');
                 }
 
-                if (result !== null) {
-                    if (!result.data.success) {
-                        throw new Error(
-                            result.data.message ||
-                            'ユーザー情報を取得できませんでした。'
-                        );
-                    }
+                // ポイント履歴・合計・終了日時などを取得します。
+                const infoResult = await requestApi(
+                    API_ENDPOINTS.info, {}
+                );
+                const info = infoResult.data.data;
 
-                    // success:trueでもuserIdがなければ不正な応答
-                    if (
-                        result.data.userId === undefined ||
-                        result.data.userId === null ||
-                        result.data.userId === ''
-                    ) {
-                        throw new Error(
-                            'ユーザーIDがAPIレスポンスにありません。'
-                        );
-                    }
-
-                    user = result.data;
-
-                } else {
-                    // 未生成の場合だけユーザーを生成する
-                    const generateResult = await requestApi(
-                        API_ENDPOINTS.generate,
-                        'POST',
-                        {}
-                    );
-
-                    if (!generateResult.data.success) {
-                        throw new Error(
-                            generateResult.data.message ||
-                            'ユーザーを生成できませんでした。'
-                        );
-                    }
-
-                    user = generateResult.data;
-
-                    // 生成後に最新の履歴・合計・終了日時を取得する
-                    const infoResult = await requestApi(
-                        API_ENDPOINTS.info,
-                        'GET'
-                    );
-
-                    if (!infoResult.data.success) {
-                        throw new Error(
-                            infoResult.data.message ||
-                            '生成後のユーザー情報を取得できませんでした。'
-                        );
-                    }
-
-                    user = {
-                        ...user,
-                        ...infoResult.data
-                    };
+                if (!info || typeof info.token !== 'string') {
+                    throw new Error('ユーザー情報APIのレスポンスが不正です。');
                 }
+
+                // ユーザーの特定にはtokenを使用し、DB内部IDはフロントエンドに公開しません。
+                user = {
+                    ...generatedUser,
+                    ...info
+                };
 
                 renderUserInfo();
                 renderScores();
                 renderStatus();
-
                 startHeartbeat();
 
             } catch (error) {
@@ -421,8 +375,13 @@
                     error.message || 'ユーザー情報の取得に失敗しました。',
                     'danger'
                 );
-
                 renderHistoryError();
+
+                document.getElementById('statusBadge').className =
+                    'badge bg-danger fs-6';
+                document.getElementById('statusBadge').textContent = '取得失敗';
+                document.getElementById('statusMessage').textContent =
+                    'ユーザー情報を取得できませんでした。時間をおいて再読み込みしてください。';
 
             } finally {
                 isInitializing = false;
@@ -433,11 +392,6 @@
          * ユーザー情報を表示する
          */
         function renderUserInfo() {
-            document.getElementById('userId').value =
-                String(user.userId);
-
-            document.getElementById('copyUserIdButton').disabled = false;
-
             if (typeof user.token === 'string' && user.token.length > 0) {
                 document.getElementById('token').value = user.token;
                 document.getElementById('copyTokenButton').disabled = false;
@@ -458,7 +412,7 @@
                     'text-danger small';
 
                 document.getElementById('qrMessage').textContent =
-                    'GET /api/user/info のレスポンスにtokenが必要です。';
+                    'ユーザー情報APIからトークンを取得できませんでした。';
             }
         }
 
@@ -551,17 +505,16 @@
         function renderScores() {
             const tbody = document.getElementById('scoreHistory');
 
-            const scores = user && Array.isArray(user.scores)
-                ? user.scores
-                : [];
+            const scores = user && Array.isArray(user.scores) ?
+                user.scores : [];
 
             const totalScore =
-                user && Number.isSafeInteger(user.totalScore)
-                    ? user.totalScore
-                    : scores.reduce(
-                        (sum, item) => sum + (Number(item.score) || 0),
-                        0
-                    );
+                user && Number.isSafeInteger(user.totalScore) ?
+                user.totalScore :
+                scores.reduce(
+                    (sum, item) => sum + (Number(item.score) || 0),
+                    0
+                );
 
             document.getElementById('totalScore').textContent =
                 totalScore.toLocaleString('ja-JP');
@@ -636,9 +589,7 @@
 
             try {
                 const result = await requestApi(
-                    API_ENDPOINTS.heartbeat,
-                    'POST',
-                    {}
+                    API_ENDPOINTS.heartbeat, {}
                 );
 
                 if (!result.data.success) {
@@ -686,9 +637,9 @@
                 return '-';
             }
 
-            const parsedDate = date instanceof Date
-                ? date
-                : new Date(date);
+            const parsedDate = date instanceof Date ?
+                date :
+                new Date(date);
 
             if (Number.isNaN(parsedDate.getTime())) {
                 return String(date);
@@ -704,7 +655,7 @@
         }
 
         /**
-         * ユーザーID・トークンをコピーする
+         * トークンをコピーする
          * @param {string} elementId
          */
         async function copyText(elementId) {
@@ -783,7 +734,7 @@
         document.addEventListener('DOMContentLoaded', initializePage);
 
         // ページを離れるときにタイマーを停止する
-        window.addEventListener('pagehide', function () {
+        window.addEventListener('pagehide', function() {
             if (heartbeatTimer !== null) {
                 clearInterval(heartbeatTimer);
                 heartbeatTimer = null;
@@ -792,4 +743,5 @@
     </script>
 
 </body>
+
 </html>
