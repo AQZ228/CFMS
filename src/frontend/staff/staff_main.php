@@ -75,7 +75,7 @@
                                 <p class="text-secondary flex-grow-1">
                                     登録されているスタッフの情報や権限を管理します。
                                 </p>
-                                <a href="/staff/staff_management.php"
+                                <a href="/admin/staff_management.php"
                                     class="btn btn-outline-primary w-100">
                                     スタッフ管理を開く
                                 </a>
@@ -93,28 +93,9 @@
                                 <p class="text-secondary flex-grow-1">
                                     文化祭に参加する店舗の情報を管理します。
                                 </p>
-                                <a href="/staff/store_management.php"
+                                <a href="/admin/store_management.php"
                                     class="btn btn-outline-success w-100">
                                     店舗管理を開く
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- スタッフアカウント作成 -->
-                    <div class="col-12 col-md-6 col-xl-4" data-menu-page="admin">
-                        <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-body p-4 d-flex flex-column">
-                                <div class="mb-3">
-                                    <span class="badge text-bg-info">ACCOUNT</span>
-                                </div>
-                                <h3 class="h5 fw-bold">スタッフアカウント作成</h3>
-                                <p class="text-secondary flex-grow-1">
-                                    新しいスタッフのアカウントを作成し、
-                                    管理者・スタッフの権限を設定します。
-                                </p>
-                                <a href="/staff/staff_account_create.php"
-                                    class="btn btn-outline-info w-100">
-                                    アカウント作成を開く
                                 </a>
                             </div>
                         </div>
@@ -130,7 +111,7 @@
                                 <p class="text-secondary flex-grow-1">
                                     新しい利用者を登録し、必要に応じて初期得点を記録します。
                                 </p>
-                                <a href="/staff/user_account_create.php"
+                                <a href="/admin/bulkscore_registration.php"
                                     class="btn btn-outline-warning w-100">
                                     ユーザー作成を開く
                                 </a>
@@ -148,7 +129,7 @@
                                 <p class="text-secondary flex-grow-1">
                                     利用者への得点付与を行い、得点履歴を記録します。
                                 </p>
-                                <a href="/staff/point_award.php"
+                                <a href="/staff/score_registration.php"
                                     class="btn btn-outline-danger w-100">
                                     得点付与を開く
                                 </a>
@@ -166,7 +147,7 @@
                                 <p class="text-secondary flex-grow-1">
                                     利用終了時に、利用者の状態と終了日時を管理します。
                                 </p>
-                                <a href="/staff/user_end_processing.php"
+                                <a href="/staff/prize_exchange.php"
                                     class="btn btn-outline-secondary w-100">
                                     終了処理を開く
                                 </a>
@@ -184,7 +165,7 @@
                                 <p class="text-secondary flex-grow-1">
                                     受付業務に関する管理機能を利用します。
                                 </p>
-                                <a href="/staff/reception_management.php"
+                                <a href="/staff/activate.php"
                                     class="btn btn-outline-dark w-100">
                                     受付画面の管理メニューを開く
                                 </a>
