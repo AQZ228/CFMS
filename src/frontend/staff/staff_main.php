@@ -241,7 +241,7 @@
 
                 if (!response.ok || !result.success || !result.data) {
                     alert(result.message || 'メニュー情報を取得できませんでした。');
-                    window.location.href = '/staff_login.php';
+                    window.location.href = '/staff/staff_login.php';
                     return;
                 }
 
@@ -319,7 +319,7 @@
                 }
 
                 alert(result.message || 'ログアウトしました。');
-                window.location.href = '/staff/login.php';
+                window.location.href = '/staff/staff_login.php';
 
             } catch (error) {
                 console.error('ログアウトAPIエラー:', error);
