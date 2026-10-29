@@ -11,8 +11,11 @@ services:
       - DB_PASS=${DB_PASS?Password is not set}
       - DB_HOST=${DB_HOST?Database host is not set}
       - DB_PORT=${DB_PORT?Database port is not set}
+      - APP_ENV=${APP_ENV?App environment is not set}
       - APP_URL=${APP_URL?App URL is not set}
       - API_URL=${API_URL?API URL is not set}
+      - ADMIN_NAME=${ADMIN_NAME?Admin username is not set}
+      - ADMIN_PASS=${ADMIN_PASS?Admin password is not set}
 
     ports:
       - "${BACKEND_PORT}:80"
