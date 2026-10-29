@@ -128,9 +128,7 @@ if (mb_strlen($password, 'UTF-8') > 256) {
     );
 }
 
-// SECTION: CSRFトークンの検証
-
-$csrf = null;
+// SECTION: CSRFトークンの検証・スタッフ認証
 
 try {
     $csrf = new Lib\CSRFToken();
@@ -143,20 +141,7 @@ try {
             403
         );
     }
-} catch (\Throwable $e) {
-    error_log("Staff login CSRF error: " . $e->getMessage());
 
-    sendLoginResponse(
-        false,
-        "セッションの処理に失敗しました。",
-        [],
-        500
-    );
-}
-
-// SECTION: スタッフ認証
-
-try {
     $db = Lib\DB::connect();
 
     /*
