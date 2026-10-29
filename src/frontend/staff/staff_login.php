@@ -52,19 +52,19 @@
 
                             <!-- CSRF -->
                             <input type="hidden"
-                                   class="csrf_token"
-                                   name="csrf_token"
-                                   value="">
+                                class="csrf_token"
+                                name="csrf_token"
+                                value="">
 
                             <div class="mb-3">
                                 <label for="staffId" class="form-label">
                                     スタッフID
                                 </label>
                                 <input type="text"
-                                       class="form-control"
-                                       id="staffId"
-                                       name="staffId"
-                                       required>
+                                    class="form-control"
+                                    id="staffId"
+                                    name="staffId"
+                                    required>
                             </div>
 
                             <div class="mb-3">
@@ -72,10 +72,10 @@
                                     スタッフ名
                                 </label>
                                 <input type="text"
-                                       class="form-control"
-                                       id="name"
-                                       name="name"
-                                       required>
+                                    class="form-control"
+                                    id="name"
+                                    name="name"
+                                    required>
                             </div>
 
                             <div class="mb-3">
@@ -83,14 +83,14 @@
                                     パスワード
                                 </label>
                                 <input type="password"
-                                       class="form-control"
-                                       id="password"
-                                       name="password"
-                                       required>
+                                    class="form-control"
+                                    id="password"
+                                    name="password"
+                                    required>
                             </div>
 
                             <button type="submit"
-                                    class="btn btn-primary w-100">
+                                class="btn btn-primary w-100">
                                 ログイン
                             </button>
 
@@ -121,7 +121,7 @@
                     `<div class="alert alert-success">${data.message}</div>`;
 
                 // 担当店舗選択ページへ遷移
-                window.location.href = '/staff/main/';
+                window.location.href = '/staff/main.php';
 
             } else {
 
@@ -151,29 +151,29 @@
                     document.querySelector('.csrf_token').value;
 
                 fetch(
-                    '<?= getenv("API_URL") ?>/staff/staff_login.php', {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            staffId,
-                            name,
-                            password,
-                            csrf_token
-                        })
-                    }
-                )
-                .then(response => response.json())
-                .then(data => renderResult(data))
-                .catch(error => {
+                        '<?= getenv("API_URL") ?>/staff/staff_login.php', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                staffId,
+                                name,
+                                password,
+                                csrf_token
+                            })
+                        }
+                    )
+                    .then(response => response.json())
+                    .then(data => renderResult(data))
+                    .catch(error => {
 
-                    console.error('Error:', error);
+                        console.error('Error:', error);
 
-                    document.getElementById('result').innerHTML =
-                        '<div class="alert alert-danger">通信エラーが発生しました。</div>';
-                });
+                        document.getElementById('result').innerHTML =
+                            '<div class="alert alert-danger">通信エラーが発生しました。</div>';
+                    });
             });
     </script>
 
