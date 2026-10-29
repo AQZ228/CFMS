@@ -1,74 +1,47 @@
 <?php
 declare(strict_types=1);
 
-/**
- * 説明:
- * スタッフIDとパスワードを使用してスタッフ認証を行います。
- *
- * 入力:
- * {
- *     "staffId": "スタッフID",
- *     "password": "パスワード",
- *     "csrfToken": "CSRFトークン"
- * }
- *
- * 出力:
- * {
- *     "success": true/false,
- *     "message": "処理結果のメッセージ",
- *     "data": {
- *         "staff": {
- *             "staffId": "スタッフID",
- *             "displayName": "表示名",
- *             "role": "staff/admin"
- *         },
- *         "csrfToken": "新しいCSRFトークン"
- *     }
- * }
- */
-
 // SECTION: 共通 - 入力の取得
 
 header("Content-Type: application/json; charset=UTF-8");
 
-// APP_URLの検証
-$appUrl = getenv("APP_URL");
+// CORS設定
+$appUrl = getenv('APP_URL');
 
 if (
     is_string($appUrl) &&
     $appUrl !== '' &&
     filter_var($appUrl, FILTER_VALIDATE_URL) !== false
 ) {
-    header("Access-Control-Allow-Origin: " . $appUrl);
-    header("Access-Control-Allow-Credentials: true");
+    $parsedUrl = parse_url($appUrl);
+
+    if (isset($parsedUrl['scheme'], $parsedUrl['host'])) {
+        $origin = $parsedUrl['scheme'] . '://' . $parsedUrl['host'];
+
+        if (isset($parsedUrl['port'])) {
+            $origin .= ':' . $parsedUrl['port'];
+        }
+
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Access-Control-Allow-Credentials: true');
+    }
 }
 
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Allow-Headers: Content-Type");
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
 
-// autoload.phpの読み込み
-// DOCUMENT_ROOTが未定義または空の場合は処理を終了する
-$documentRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
-
-if ($documentRoot === '') {
-    http_response_code(500);
-
-    echo json_encode([
-        "success" => false,
-        "message" => "サーバーの設定に問題があります。",
-        "data" => []
-    ], JSON_UNESCAPED_UNICODE);
-
+// CORSプリフライトリクエストへの対応
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
     exit;
 }
 
-require_once rtrim($documentRoot, DIRECTORY_SEPARATOR)
-    . DIRECTORY_SEPARATOR . 'vendor'
-    . DIRECTORY_SEPARATOR . 'autoload.php';
+// autoload.phpの読み込み
+// 実際のファイル配置に合わせてパスを指定してください。
+require_once __DIR__ . '/../../vendor/autoload.php';
 
-/**
- * JSONレスポンスを返して処理を終了します。
- */
+// SECTION: 共通 - レスポンスの送信
+
 function sendLoginResponse(
     bool $success,
     string $message,
@@ -86,8 +59,10 @@ function sendLoginResponse(
     exit;
 }
 
+// SECTION: HTTPメソッドの確認
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header("Allow: POST");
+    header("Allow: POST, OPTIONS");
 
     sendLoginResponse(
         false,
@@ -97,25 +72,21 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     );
 }
 
+// SECTION: リクエストデータの取得
+
 $rawData = file_get_contents('php://input');
 $requestData = json_decode($rawData, true);
 
-if (
-    json_last_error() !== JSON_ERROR_NONE ||
-    !is_array($requestData)
-) {
+if (json_last_error() !== JSON_ERROR_NONE || !is_array($requestData)) {
     sendLoginResponse(
         false,
-        "JSONのデコードに失敗しました。",
+        "リクエストデータが正しくありません。",
         [],
         400
     );
 }
 
-// !SECTION
-
-
-// SECTION: 入力のバリデーション
+// SECTION: 入力値の取得と検証
 
 $staffId = $requestData['staffId'] ?? null;
 $password = $requestData['password'] ?? null;
@@ -139,7 +110,6 @@ if (
 
 $staffId = trim($staffId);
 
-// スタッフIDは100文字以内
 if (mb_strlen($staffId, 'UTF-8') > 100) {
     sendLoginResponse(
         false,
@@ -149,7 +119,6 @@ if (mb_strlen($staffId, 'UTF-8') > 100) {
     );
 }
 
-// パスワードは256文字以内
 if (mb_strlen($password, 'UTF-8') > 256) {
     sendLoginResponse(
         false,
@@ -159,12 +128,8 @@ if (mb_strlen($password, 'UTF-8') > 256) {
     );
 }
 
-// !SECTION
-
-
 // SECTION: CSRFトークンの検証
 
-// 未定義変数を防ぐため事前に初期化
 $csrf = null;
 
 try {
@@ -189,9 +154,6 @@ try {
     );
 }
 
-// !SECTION
-
-
 // SECTION: スタッフ認証
 
 try {
@@ -206,20 +168,19 @@ try {
          FROM staff
          WHERE name = :staffId
          LIMIT 1",
-        [
-            ':staffId' => $staffId
-        ]
+        [':staffId' => $staffId]
     );
 
     $staff = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    /*
-     * DBから取得した値の存在と型を確認します。
-     * 必要なキーがない場合は不正なスタッフ情報として扱います。
-     */
     $staffDataValid = (
         is_array($staff) &&
-        isset($staff['id'], $staff['name'], $staff['password'], $staff['role']) &&
+        isset(
+            $staff['id'],
+            $staff['name'],
+            $staff['password'],
+            $staff['role']
+        ) &&
         (is_int($staff['id']) || is_string($staff['id'])) &&
         is_string($staff['name']) &&
         is_string($staff['password']) &&
@@ -229,10 +190,6 @@ try {
         ctype_digit((string) $staff['id'])
     );
 
-    /*
-     * スタッフが存在しない場合やデータが不正な場合も
-     * パスワード検証を実行します。
-     */
     $dummyPasswordHash =
         '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.he5eXk7p1e';
 
@@ -240,12 +197,8 @@ try {
         ? $staff['password']
         : $dummyPasswordHash;
 
-    $passwordVerified = password_verify(
-        $password,
-        $passwordHash
-    );
+    $passwordVerified = password_verify($password, $passwordHash);
 
-    // スタッフ情報またはパスワードが不正な場合
     if (!$staffDataValid || !$passwordVerified) {
         $csrf->clearToken();
         $newCsrfToken = $csrf->generateToken();
@@ -253,14 +206,11 @@ try {
         sendLoginResponse(
             false,
             "スタッフIDまたはパスワードが正しくありません。",
-            [
-                "csrfToken" => $newCsrfToken
-            ],
+            ["csrfToken" => $newCsrfToken],
             401
         );
     }
 
-    // 利用可能な権限か確認
     if (!in_array($staff['role'], ['staff', 'admin'], true)) {
         $csrf->clearToken();
         $newCsrfToken = $csrf->generateToken();
@@ -268,27 +218,19 @@ try {
         sendLoginResponse(
             false,
             "このアカウントは利用できません。",
-            [
-                "csrfToken" => $newCsrfToken
-            ],
+            ["csrfToken" => $newCsrfToken],
             403
         );
     }
 
-    // セッション管理ライブラリを使用
-    $session = new Lib\Session();
+    // SECTION: セッションの更新
 
-    // セッション固定攻撃対策：セッションIDを再生成
+    $session = new Lib\Session();
     $session->regenerateId(true);
 
-    /*
-     * 認証状態が変わったため、古いCSRFトークンを破棄し、
-     * 新しいトークンを発行します。
-     */
     $csrf->clearToken();
     $newCsrfToken = $csrf->generateToken();
 
-    // 認証済みスタッフ情報をセッションに保存
     $sessionStaff = [
         "id" => (int) $staff['id'],
         "staffId" => $staff['name'],
@@ -298,7 +240,8 @@ try {
 
     $session->set('staff', $sessionStaff);
 
-    // ログイン成功
+    // SECTION: ログイン成功レスポンス
+
     sendLoginResponse(
         true,
         "ログインに成功しました。",
@@ -311,7 +254,6 @@ try {
             "csrfToken" => $newCsrfToken
         ]
     );
-
 } catch (\Throwable $e) {
     error_log("Staff login error: " . $e->getMessage());
 
@@ -322,5 +264,3 @@ try {
         500
     );
 }
-
-// !SECTION
