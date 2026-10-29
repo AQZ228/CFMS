@@ -69,11 +69,12 @@
 
                         <form id="loginForm" novalidate>
 
-                            <!-- CSRFトークン -->
+                            <!-- CSRFトークン：自動注入対象 -->
                             <input
                                 type="hidden"
                                 id="csrfToken"
                                 name="csrf_token"
+                                class="csrf_token"
                                 value=""
                             >
 
@@ -238,7 +239,7 @@
         // ==============================
 
         /**
-         * hidden inputとmetaタグのCSRFトークンを更新する
+         * hidden inputのCSRFトークンを更新する
          *
          * @param {string} token 新しいCSRFトークン
          */
@@ -278,9 +279,6 @@
         /**
          * JSON APIを呼び出す
          *
-         * HTTPエラーのレスポンスでもJSONが返された場合は、
-         * バックエンドのsuccess/message/dataを呼び出し元へ返す。
-         *
          * @param {string} url APIのURL
          * @param {Object} options fetchのオプション
          * @returns {Promise<{result: Object, status: number}>}
@@ -288,7 +286,6 @@
         async function requestJson(url, options) {
             const response = await fetch(url, options);
 
-            // JSON以外のレスポンスを確認
             const contentType = response.headers.get('content-type') || '';
 
             if (!contentType.toLowerCase().includes('application/json')) {
@@ -307,8 +304,6 @@
                 );
             }
 
-            // レスポンスの形式を確認
-            // dataは空配列などの配列でも許容する
             if (
                 !result ||
                 typeof result !== 'object' ||
@@ -323,8 +318,6 @@
                 );
             }
 
-            // HTTPエラーでもJSON形式なら呼び出し元に返す。
-            // 401などのバックエンドメッセージを画面に表示するため。
             return {
                 result: result,
                 status: response.status
@@ -335,12 +328,6 @@
         // API：ログイン処理
         // ==============================
 
-        /**
-         * スタッフログインAPIを呼び出す
-         *
-         * @param {Object} payload ログイン情報
-         * @returns {Promise<{result: Object, status: number}>}
-         */
         async function loginApi(payload) {
             return await requestJson(LOGIN_API_URL, {
                 method: 'POST',
@@ -370,7 +357,6 @@
             const password = passwordInput.value;
             const csrfToken = getCsrfToken();
 
-            // 必須入力チェック
             staffIdInput.classList.toggle('is-invalid', !staffId);
             passwordInput.classList.toggle('is-invalid', !password);
 
@@ -382,7 +368,6 @@
                 return;
             }
 
-            // CSRFトークン確認
             if (!csrfToken) {
                 showMessage(
                     'CSRFトークンを取得できません。ページを再読み込みしてください。',
@@ -404,7 +389,7 @@
 
                 const result = response.result;
 
-                // 成功・失敗にかかわらず、返されたトークンを更新
+                // ログイン成功・失敗時に返されたトークンを更新
                 if (
                     typeof result.data.csrfToken === 'string' &&
                     result.data.csrfToken !== ''
@@ -412,20 +397,18 @@
                     updateCsrfToken(result.data.csrfToken);
                 }
 
-                // HTTPステータスとAPIのsuccessを確認
                 if (
-                    !response.status.toString().startsWith('2') ||
+                    response.status < 200 ||
+                    response.status >= 300 ||
                     result.success !== true
                 ) {
                     showMessage(
                         result.message || 'ログインに失敗しました。',
                         'danger'
                     );
-
                     return;
                 }
 
-                // ログイン成功時のスタッフ情報を確認
                 const staff = result.data.staff;
 
                 if (
@@ -479,11 +462,6 @@
         // API：ログイン状態確認
         // ==============================
 
-        /**
-         * サーバーのセッションを確認する
-         *
-         * @returns {Promise<{result: Object, status: number}>}
-         */
         async function isLoggedInApi() {
             return await requestJson(SESSION_API_URL, {
                 method: 'POST',
@@ -581,7 +559,7 @@
         // 初期CSRFトークンの同期
         // ==============================
 
-        // fetch_csrf_token.phpが設定したmetaタグの値を利用する
+        // metaタグにトークンが設定されている場合のみ同期する
         if (csrfTokenMeta && csrfTokenMeta.content) {
             updateCsrfToken(csrfTokenMeta.content);
         }
