@@ -47,9 +47,24 @@ header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Allow-Headers: Content-Type");
 
 // autoload.phpの読み込み
-// __DIR__からvendor/autoload.phpまでの相対パスは、
-// 実際のファイル配置に合わせて指定してください。
-require_once $_SERVER['DOCUMENT_ROOT'] . '/vendor/autoload.php';
+// DOCUMENT_ROOTが未定義または空の場合は処理を終了する
+$documentRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+
+if ($documentRoot === '') {
+    http_response_code(500);
+
+    echo json_encode([
+        "success" => false,
+        "message" => "サーバーの設定に問題があります。",
+        "data" => []
+    ], JSON_UNESCAPED_UNICODE);
+
+    exit;
+}
+
+require_once rtrim($documentRoot, DIRECTORY_SEPARATOR)
+    . DIRECTORY_SEPARATOR . 'vendor'
+    . DIRECTORY_SEPARATOR . 'autoload.php';
 
 /**
  * JSONレスポンスを返して処理を終了します。
