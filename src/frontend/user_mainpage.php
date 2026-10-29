@@ -38,16 +38,6 @@
 
 <body class="bg-light">
 
-    <!-- ヘッダー -->
-    <nav class="navbar navbar-dark bg-primary sticky-top">
-        <div class="container-fluid px-3">
-            <span class="navbar-brand fs-5 fw-bold mb-0">
-                マイページ
-            </span>
-            <span class="badge bg-light text-primary">ユーザー</span>
-        </div>
-    </nav>
-
     <!-- メインコンテンツ -->
     <main>
         <div class="container py-3" style="max-width: 900px;">
