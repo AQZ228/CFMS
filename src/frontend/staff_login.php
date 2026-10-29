@@ -248,7 +248,10 @@
                 return;
             }
 
-            csrfTokenInput.value = token;
+            // hidden inputが存在する場合のみ更新する
+            if (csrfTokenInput) {
+                csrfTokenInput.value = token;
+            }
 
             if (csrfTokenMeta) {
                 csrfTokenMeta.content = token;
@@ -261,10 +264,12 @@
          * @returns {string} CSRFトークン
          */
         function getCsrfToken() {
-            if (csrfTokenInput.value) {
+            // hidden inputが存在し、値がある場合
+            if (csrfTokenInput && csrfTokenInput.value) {
                 return csrfTokenInput.value;
             }
 
+            // metaタグに値がある場合
             if (csrfTokenMeta && csrfTokenMeta.content) {
                 return csrfTokenMeta.content;
             }

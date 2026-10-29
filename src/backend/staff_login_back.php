@@ -30,11 +30,25 @@ declare(strict_types=1);
 // SECTION: 共通 - 入力の取得
 
 header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Origin: " . getenv("APP_URL"));
+
+// APP_URLの検証
+$appUrl = getenv("APP_URL");
+
+if (
+    is_string($appUrl) &&
+    $appUrl !== '' &&
+    filter_var($appUrl, FILTER_VALIDATE_URL) !== false
+) {
+    header("Access-Control-Allow-Origin: " . $appUrl);
+    header("Access-Control-Allow-Credentials: true");
+}
+
 header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Allow-Headers: Content-Type");
-header("Access-Control-Allow-Credentials: true");
 
+// autoload.phpの読み込み
+// __DIR__からvendor/autoload.phpまでの相対パスは、
+// 実際のファイル配置に合わせて指定してください。
 require_once $_SERVER['DOCUMENT_ROOT'] . '/vendor/autoload.php';
 
 /**
@@ -135,6 +149,9 @@ if (mb_strlen($password, 'UTF-8') > 256) {
 
 // SECTION: CSRFトークンの検証
 
+// 未定義変数を防ぐため事前に初期化
+$csrf = null;
+
 try {
     $csrf = new Lib\CSRFToken();
 
@@ -182,17 +199,29 @@ try {
     $staff = $stmt->fetch(PDO::FETCH_ASSOC);
 
     /*
-     * スタッフが存在しない場合もパスワード検証を実行し、
-     * 応答時間の差を抑えます。
+     * DBから取得した値の存在と型を確認します。
+     * 必要なキーがない場合は不正なスタッフ情報として扱います。
+     */
+    $staffDataValid = (
+        is_array($staff) &&
+        isset($staff['id'], $staff['name'], $staff['password'], $staff['role']) &&
+        (is_int($staff['id']) || is_string($staff['id'])) &&
+        is_string($staff['name']) &&
+        is_string($staff['password']) &&
+        is_string($staff['role']) &&
+        $staff['name'] !== '' &&
+        $staff['password'] !== '' &&
+        ctype_digit((string) $staff['id'])
+    );
+
+    /*
+     * スタッフが存在しない場合やデータが不正な場合も
+     * パスワード検証を実行します。
      */
     $dummyPasswordHash =
         '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.he5eXk7p1e';
 
-    $passwordHash = (
-        is_array($staff) &&
-        isset($staff['password']) &&
-        is_string($staff['password'])
-    )
+    $passwordHash = $staffDataValid
         ? $staff['password']
         : $dummyPasswordHash;
 
@@ -201,8 +230,8 @@ try {
         $passwordHash
     );
 
-    // ログイン失敗時もCSRFトークンを更新
-    if (!$staff || !$passwordVerified) {
+    // スタッフ情報またはパスワードが不正な場合
+    if (!$staffDataValid || !$passwordVerified) {
         $csrf->clearToken();
         $newCsrfToken = $csrf->generateToken();
 
@@ -218,7 +247,6 @@ try {
 
     // 利用可能な権限か確認
     if (!in_array($staff['role'], ['staff', 'admin'], true)) {
-        // 権限エラー時もCSRFトークンを更新
         $csrf->clearToken();
         $newCsrfToken = $csrf->generateToken();
 
