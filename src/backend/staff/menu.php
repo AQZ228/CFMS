@@ -155,7 +155,8 @@ try {
             'id' => (int)$staff['id'],
             'name' => $staff['name'],
             'role' => $staff['role']
-        ]
+        ],
+        'stores' => []
     ];
 
     if ($staff['role'] === 'admin') {
