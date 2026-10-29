@@ -84,21 +84,8 @@
                     <!-- CSRFトークン -->
                     <input type="hidden" class="csrf_token" name="csrf_token" value="">
 
-                    <!-- 編集対象のスタッフID -->
+                    <!-- 編集対象スタッフID -->
                     <input type="hidden" id="originalStaffId">
-
-                    <div class="mb-3">
-                        <label for="staffId" class="form-label">
-                            スタッフID <span class="text-danger">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            class="form-control"
-                            id="staffId"
-                            name="staffId"
-                            maxlength="100"
-                            required>
-                    </div>
 
                     <div class="mb-3">
                         <label for="staffName" class="form-label">
@@ -125,6 +112,7 @@
                             name="password"
                             autocomplete="new-password"
                             required>
+
                         <div class="form-text" id="passwordHelp">
                             新規登録時はパスワードが必須です。
                         </div>
@@ -186,7 +174,10 @@
                     </fieldset>
 
                     <fieldset class="mb-4">
-                        <legend class="form-label">担当店舗</legend>
+                        <legend class="form-label">
+                            所属店舗
+                        </legend>
+
                         <div id="storeCheckboxes">
                             <p class="text-muted mb-0">
                                 店舗情報を読み込んでいます。
@@ -195,10 +186,17 @@
                     </fieldset>
 
                     <div class="d-flex flex-wrap gap-2">
-                        <button type="submit" class="btn btn-primary" id="saveStaffBtn">
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                            id="saveStaffBtn">
                             登録する
                         </button>
-                        <button type="button" class="btn btn-secondary" id="cancelBtn">
+
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            id="cancelBtn">
                             キャンセル
                         </button>
                     </div>
@@ -215,23 +213,34 @@
 
             <div class="card-body">
                 <form id="deleteForm">
-                    <input type="hidden" class="csrf_token" name="csrf_token" value="">
+
+                    <input
+                        type="hidden"
+                        class="csrf_token"
+                        name="csrf_token"
+                        value="">
 
                     <div class="mb-3">
                         <label for="deleteStaffId" class="form-label">
                             削除するスタッフID
                         </label>
+
                         <input
-                            type="text"
+                            type="number"
                             class="form-control"
                             id="deleteStaffId"
                             name="staffId"
+                            min="1"
                             required>
                     </div>
 
-                    <button type="submit" class="btn btn-danger" id="deleteStaffBtn">
+                    <button
+                        type="submit"
+                        class="btn btn-danger"
+                        id="deleteStaffBtn">
                         スタッフを削除
                     </button>
+
                 </form>
             </div>
         </section>
@@ -239,31 +248,15 @@
     </main>
 
     <script>
-        // APIのURL
-        const API_URL = '<?= getenv('API_URL') ?>/template/template.php';
+        const API_BASE_URL = '<?= getenv('API_URL') ?>';
 
-        // モック用スタッフデータ
-        let staffs = [
-            {
-                staffId: 'staff001',
-                name: '山田太郎',
-                role: 'reception',
-                storeIds: ['1']
-            },
-            {
-                staffId: 'staff002',
-                name: '佐藤花子',
-                role: 'store',
-                storeIds: ['1', '2']
-            }
-        ];
+        const STAFFS_API = `${API_BASE_URL}/admin/staffs.php`;
+        const STAFF_API = `${API_BASE_URL}/admin/staff.php`;
+        const STAFF_DELETE_API = `${API_BASE_URL}/admin/staff_delete.php`;
+        const STORES_API = `${API_BASE_URL}/admin/stores.php`;
 
-        // モック用店舗データ
-        let stores = [
-            { id: '1', name: '1組店舗' },
-            { id: '2', name: '2組店舗' },
-            { id: '3', name: '3組店舗' }
-        ];
+        let staffs = [];
+        let stores = [];
 
         const roleNames = {
             reception: '受付',
@@ -272,61 +265,96 @@
             admin: '管理者'
         };
 
-        // 結果メッセージを表示
         function renderResult(data) {
             const resultDiv = document.getElementById('result');
+
             resultDiv.replaceChildren();
 
             const alertDiv = document.createElement('div');
-            alertDiv.className = data.success === true
-                ? 'alert alert-success'
-                : 'alert alert-danger';
 
-            alertDiv.textContent = data.message || (
-                data.success === true
-                    ? '処理が完了しました。'
-                    : '処理に失敗しました。'
-            );
+            alertDiv.className = data.success ?
+                'alert alert-success' :
+                'alert alert-danger';
+
+            alertDiv.textContent = data.message ||
+                (data.success ?
+                    '処理が完了しました。' :
+                    '処理に失敗しました。');
 
             resultDiv.appendChild(alertDiv);
-
-            if (data.data) {
-                console.log('サーバーからのデータ:', data.data);
-            }
         }
 
-        // CSRFトークンを取得
         function getCsrfToken() {
-            return document.querySelector('.csrf_token').value;
+            return document.querySelector('.csrf_token')?.value ?? '';
         }
 
-        // API通信
-        function callApi(requestData) {
-            const csrf_token = getCsrfToken();
+        async function waitForCsrfToken(timeoutMs = 10000) {
+            const start = Date.now();
 
-            return fetch(API_URL, {
+            while (Date.now() - start < timeoutMs) {
+                const token = getCsrfToken();
+
+                if (token) {
+                    return token;
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            throw new Error('CSRFトークンの取得に失敗しました。');
+        }
+
+        async function postJson(url, body = {}) {
+            const csrf_token = await waitForCsrfToken();
+
+            const response = await fetch(url, {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    ...requestData,
+                    ...body,
                     csrf_token
                 })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('通信に失敗しました。');
-                }
-
-                return response.json();
             });
+
+            if (!response.ok) {
+                throw new Error('通信に失敗しました。');
+            }
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(
+                    data.message || '処理に失敗しました。'
+                );
+            }
+
+            return data;
         }
 
-        // スタッフ一覧を表示
+        async function loadStores() {
+            const data = await postJson(STORES_API);
+
+            stores = Array.isArray(data.stores) ?
+                data.stores : [];
+
+            renderStoreCheckboxes();
+        }
+
+        async function loadStaffs() {
+            const data = await postJson(STAFFS_API);
+
+            staffs = Array.isArray(data.staffs) ?
+                data.staffs : [];
+
+            renderStaffs();
+        }
+
         function renderStaffs() {
             const staffList = document.getElementById('staffList');
+
             staffList.replaceChildren();
 
             if (staffs.length === 0) {
@@ -339,6 +367,7 @@
 
                 tr.appendChild(td);
                 staffList.appendChild(tr);
+
                 return;
             }
 
@@ -346,141 +375,188 @@
                 const tr = document.createElement('tr');
 
                 const idTd = document.createElement('td');
-                idTd.textContent = staff.staffId;
+                idTd.textContent = staff.id;
 
                 const nameTd = document.createElement('td');
                 nameTd.textContent = staff.name;
 
                 const roleTd = document.createElement('td');
-                roleTd.textContent = roleNames[staff.role] || staff.role;
+                roleTd.textContent =
+                    roleNames[staff.role] || staff.role;
 
                 const storeTd = document.createElement('td');
 
-                const staffStores = stores
+                const assignedStores = stores
                     .filter(store =>
-                        (staff.storeIds || []).includes(String(store.id))
+                        (staff.storeIds || [])
+                        .map(Number)
+                        .includes(Number(store.id))
                     )
                     .map(store => store.name);
 
-                storeTd.textContent = staffStores.length > 0
-                    ? staffStores.join('、')
-                    : '未設定';
+                storeTd.textContent =
+                    assignedStores.length > 0 ?
+                    assignedStores.join('、') :
+                    '未設定';
 
                 const actionTd = document.createElement('td');
-                const buttonGroup = document.createElement('div');
-                buttonGroup.className = 'd-flex flex-wrap gap-2';
+
+                const group = document.createElement('div');
+                group.className = 'd-flex flex-wrap gap-2';
 
                 const editButton = document.createElement('button');
                 editButton.type = 'button';
-                editButton.className = 'btn btn-sm btn-warning';
+                editButton.className =
+                    'btn btn-sm btn-warning';
+
                 editButton.textContent = '編集';
+
                 editButton.addEventListener('click', () => {
-                    editStaff(staff.staffId);
+                    editStaff(staff.id);
                 });
 
                 const deleteButton = document.createElement('button');
-                deleteButton.type = 'button';
-                deleteButton.className = 'btn btn-sm btn-danger';
-                deleteButton.textContent = '削除';
-                deleteButton.addEventListener('click', () => {
-                    document.getElementById('deleteStaffId').value =
-                        staff.staffId;
 
-                    document.getElementById('deleteStaffId').focus();
+                deleteButton.type = 'button';
+                deleteButton.className =
+                    'btn btn-sm btn-danger';
+
+                deleteButton.textContent = '削除';
+
+                deleteButton.addEventListener('click', () => {
+                    document.getElementById(
+                        'deleteStaffId'
+                    ).value = staff.id;
+
+                    document.getElementById(
+                        'deleteStaffId'
+                    ).focus();
                 });
 
-                buttonGroup.append(editButton, deleteButton);
-                actionTd.appendChild(buttonGroup);
+                group.append(
+                    editButton,
+                    deleteButton
+                );
 
-                tr.append(idTd, nameTd, roleTd, storeTd, actionTd);
+                actionTd.appendChild(group);
+
+                tr.append(
+                    idTd,
+                    nameTd,
+                    roleTd,
+                    storeTd,
+                    actionTd
+                );
+
                 staffList.appendChild(tr);
             });
         }
 
-        // 店舗チェックボックスを表示
         function renderStoreCheckboxes(selectedStoreIds = []) {
             const container = document.getElementById('storeCheckboxes');
+
             container.replaceChildren();
 
-            const normalizedSelectedIds = selectedStoreIds.map(String);
+            const selected = selectedStoreIds.map(Number);
 
             if (stores.length === 0) {
                 const p = document.createElement('p');
-                p.className = 'text-muted';
+
+                p.className = 'text-muted mb-0';
                 p.textContent = '店舗が登録されていません。';
+
                 container.appendChild(p);
                 return;
             }
 
             stores.forEach(store => {
                 const wrapper = document.createElement('div');
+
                 wrapper.className = 'form-check';
 
                 const checkbox = document.createElement('input');
+
                 checkbox.type = 'checkbox';
-                checkbox.className = 'form-check-input store-checkbox';
+                checkbox.className =
+                    'form-check-input store-checkbox';
+
                 checkbox.id = `store-${store.id}`;
-                checkbox.value = String(store.id);
+                checkbox.value = store.id;
+
                 checkbox.checked =
-                    normalizedSelectedIds.includes(String(store.id));
+                    selected.includes(Number(store.id));
 
                 const label = document.createElement('label');
+
                 label.className = 'form-check-label';
                 label.htmlFor = checkbox.id;
                 label.textContent = store.name;
 
-                wrapper.append(checkbox, label);
+                wrapper.append(
+                    checkbox,
+                    label
+                );
+
                 container.appendChild(wrapper);
             });
         }
 
-        // 選択された店舗IDを取得
         function getSelectedStoreIds() {
             return Array.from(
-                document.querySelectorAll('.store-checkbox:checked')
-            ).map(checkbox => checkbox.value);
+                document.querySelectorAll(
+                    '.store-checkbox:checked'
+                )
+            ).map(item => Number(item.value));
         }
 
-        // パスワード必須状態を切り替える
         function setPasswordRequirement(isEditing) {
-            const passwordInput = document.getElementById('staffPassword');
-            const requiredMark = document.getElementById('passwordRequiredMark');
-            const passwordHelp = document.getElementById('passwordHelp');
+            const passwordInput =
+                document.getElementById('staffPassword');
+
+            const requiredMark =
+                document.getElementById(
+                    'passwordRequiredMark'
+                );
+
+            const passwordHelp =
+                document.getElementById('passwordHelp');
 
             passwordInput.required = !isEditing;
-            requiredMark.classList.toggle('d-none', isEditing);
 
-            passwordHelp.textContent = isEditing
-                ? 'パスワードを変更しない場合は空欄にしてください。'
-                : '新規登録時はパスワードが必須です。';
+            requiredMark.classList.toggle(
+                'd-none',
+                isEditing
+            );
+
+            passwordHelp.textContent = isEditing ?
+                'パスワードを変更しない場合は空欄にしてください。' :
+                '新規登録時はパスワードが必須です。';
         }
 
-        // フォームを初期状態に戻す
         function resetForm() {
             document.getElementById('staffForm').reset();
 
-            document.getElementById('originalStaffId').value = '';
-            document.getElementById('staffId').disabled = false;
+            document.getElementById(
+                'originalStaffId'
+            ).value = '';
 
-            document.getElementById('formTitle').textContent = 'スタッフ登録';
-            document.getElementById('saveStaffBtn').textContent = '登録する';
+            document.getElementById(
+                'formTitle'
+            ).textContent = 'スタッフ登録';
+
+            document.getElementById(
+                'saveStaffBtn'
+            ).textContent = '登録する';
 
             setPasswordRequirement(false);
+
             renderStoreCheckboxes();
         }
 
-        // 新規登録フォームを表示
-        document.getElementById('newStaffBtn').addEventListener('click', () => {
-            resetForm();
-
-            document.getElementById('staffFormSection').scrollIntoView({
-                behavior: 'smooth'
-            });
-        });
-
-        // スタッフ編集
         function editStaff(staffId) {
-            const staff = staffs.find(item => item.staffId === staffId);
+            const staff = staffs.find(
+                item => Number(item.id) === Number(staffId)
+            );
 
             if (!staff) {
                 renderResult({
@@ -490,11 +566,17 @@
                 return;
             }
 
-            document.getElementById('originalStaffId').value = staff.staffId;
-            document.getElementById('staffId').value = staff.staffId;
-            document.getElementById('staffId').disabled = true;
-            document.getElementById('staffName').value = staff.name;
-            document.getElementById('staffPassword').value = '';
+            document.getElementById(
+                'originalStaffId'
+            ).value = staff.id;
+
+            document.getElementById(
+                'staffName'
+            ).value = staff.name ?? '';
+
+            document.getElementById(
+                'staffPassword'
+            ).value = '';
 
             const roleRadio = document.querySelector(
                 `input[name="role"][value="${staff.role}"]`
@@ -504,242 +586,269 @@
                 roleRadio.checked = true;
             }
 
-            renderStoreCheckboxes(staff.storeIds || []);
+            renderStoreCheckboxes(
+                staff.storeIds || []
+            );
 
-            document.getElementById('formTitle').textContent = 'スタッフ編集';
-            document.getElementById('saveStaffBtn').textContent = '更新する';
+            document.getElementById(
+                'formTitle'
+            ).textContent = 'スタッフ編集';
 
-            // 編集時はパスワードを必須にしない
+            document.getElementById(
+                'saveStaffBtn'
+            ).textContent = '更新する';
+
             setPasswordRequirement(true);
 
-            document.getElementById('staffFormSection').scrollIntoView({
+            document.getElementById(
+                'staffFormSection'
+            ).scrollIntoView({
                 behavior: 'smooth'
             });
         }
 
-        // 登録・更新
-        document.getElementById('staffForm').addEventListener('submit', function(event) {
-            event.preventDefault();
+        document.getElementById(
+            'newStaffBtn'
+        ).addEventListener('click', () => {
+            resetForm();
 
-            const originalStaffId =
-                document.getElementById('originalStaffId').value;
+            document.getElementById(
+                'staffFormSection'
+            ).scrollIntoView({
+                behavior: 'smooth'
+            });
+        });
 
-            const staffId =
-                document.getElementById('staffId').value.trim();
+        document.getElementById(
+            'cancelBtn'
+        ).addEventListener(
+            'click',
+            resetForm
+        );
 
-            const name =
-                document.getElementById('staffName').value.trim();
+        document.getElementById(
+            'staffForm'
+        ).addEventListener(
+            'submit',
+            async event => {
 
-            const password =
-                document.getElementById('staffPassword').value;
+                event.preventDefault();
 
-            const role =
-                document.querySelector('input[name="role"]:checked')?.value;
+                const originalStaffId =
+                    document.getElementById(
+                        'originalStaffId'
+                    ).value;
 
-            const storeIds = getSelectedStoreIds();
+                const name =
+                    document.getElementById(
+                        'staffName'
+                    ).value.trim();
 
-            const isEditing = originalStaffId !== '';
+                const password =
+                    document.getElementById(
+                        'staffPassword'
+                    ).value;
 
-            // 必須項目チェック
-            if (!staffId || !name || !role) {
-                renderResult({
-                    success: false,
-                    message: '必須項目を入力してください。'
-                });
-                return;
-            }
+                const role =
+                    document.querySelector(
+                        'input[name="role"]:checked'
+                    )?.value;
 
-            // 新規登録時はパスワード必須
-            if (!isEditing && password.trim() === '') {
-                renderResult({
-                    success: false,
-                    message: '新規登録時はパスワードを入力してください。'
-                });
+                const storeIds =
+                    getSelectedStoreIds();
 
-                document.getElementById('staffPassword').focus();
-                return;
-            }
+                const isEditing =
+                    originalStaffId !== '';
 
-            // 新規登録時のスタッフID重複チェック
-            if (!isEditing) {
-                const exists = staffs.some(
-                    staff => staff.staffId === staffId
-                );
-
-                if (exists) {
+                if (!name || !role) {
                     renderResult({
                         success: false,
-                        message: 'このスタッフIDはすでに登録されています。'
+                        message: '必須項目を入力してください。'
                     });
                     return;
                 }
-            }
 
-            const requestData = {
-                action: isEditing ? 'update_staff' : 'create_staff',
-                originalStaffId,
-                staffId,
-                name,
-                role,
-                storeIds
-            };
+                if (
+                    !isEditing &&
+                    password.trim() === ''
+                ) {
+                    renderResult({
+                        success: false,
+                        message: 'パスワードを入力してください。'
+                    });
+                    return;
+                }
 
-            // パスワードが入力されている場合だけ送信
-            if (password !== '') {
-                requestData.password = password;
-            }
+                const requestData = {
+                    name,
+                    role,
+                    storeIds
+                };
 
-            const saveButton = document.getElementById('saveStaffBtn');
-            saveButton.disabled = true;
+                if (isEditing) {
+                    requestData.staffId =
+                        Number(originalStaffId);
+                }
 
-            callApi(requestData)
-                .then(data => {
-                    // APIが成功を明示していない場合は画面を更新しない
-                    if (!data || data.success !== true) {
-                        renderResult({
-                            success: false,
-                            message: data?.message ||
-                                '登録・更新に失敗しました。画面の情報は変更していません。'
-                        });
-                        return;
-                    }
+                if (password.trim() !== '') {
+                    requestData.password =
+                        password;
+                }
 
-                    // API成功後にだけローカル状態を更新
-                    if (isEditing) {
-                        staffs = staffs.map(staff =>
-                            staff.staffId === originalStaffId
-                                ? {
-                                    staffId,
-                                    name,
-                                    role,
-                                    storeIds
-                                }
-                                : staff
+                const saveButton =
+                    document.getElementById(
+                        'saveStaffBtn'
+                    );
+
+                saveButton.disabled = true;
+
+                try {
+
+                    const result =
+                        await postJson(
+                            STAFF_API,
+                            requestData
                         );
-                    } else {
-                        staffs.push({
-                            staffId,
-                            name,
-                            role,
-                            storeIds
-                        });
-                    }
-
-                    renderStaffs();
-                    resetForm();
 
                     renderResult({
                         success: true,
-                        message: data.message || (
-                            isEditing
-                                ? 'スタッフ情報を更新しました。'
-                                : 'スタッフを登録しました。'
-                        ),
-                        data: data.data
+                        message: result.message ||
+                            (
+                                isEditing ?
+                                'スタッフ情報を更新しました。' :
+                                'スタッフを登録しました。'
+                            )
                     });
-                })
-                .catch(error => {
-                    console.error('Error:', error);
+
+                    await loadStaffs();
+
+                    resetForm();
+
+                } catch (error) {
 
                     renderResult({
                         success: false,
                         message: error.message ||
-                            '通信エラーが発生しました。画面の情報は変更していません。'
+                            '保存に失敗しました。'
                     });
-                })
-                .finally(() => {
+
+                } finally {
                     saveButton.disabled = false;
-                });
-        });
-
-        // キャンセル
-        document.getElementById('cancelBtn').addEventListener('click', resetForm);
-
-        // スタッフ削除
-        document.getElementById('deleteForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-
-            const staffId =
-                document.getElementById('deleteStaffId').value.trim();
-
-            if (!staffId) {
-                renderResult({
-                    success: false,
-                    message: '削除するスタッフIDを入力してください。'
-                });
-                return;
+                }
             }
+        );
 
-            const staff = staffs.find(item => item.staffId === staffId);
+        document.getElementById(
+            'deleteForm'
+        ).addEventListener(
+            'submit',
+            async event => {
 
-            if (!staff) {
-                renderResult({
-                    success: false,
-                    message: '指定されたスタッフが見つかりません。'
-                });
-                return;
-            }
+                event.preventDefault();
 
-            if (!confirm(`スタッフ「${staff.name}」を削除しますか？`)) {
-                return;
-            }
+                const staffId =
+                    document.getElementById(
+                        'deleteStaffId'
+                    ).value.trim();
 
-            const deleteButton = document.getElementById('deleteStaffBtn');
-            deleteButton.disabled = true;
-
-            callApi({
-                action: 'delete_staff',
-                staffId
-            })
-            .then(data => {
-                // APIが成功を明示していない場合は削除しない
-                if (!data || data.success !== true) {
+                if (!staffId) {
                     renderResult({
                         success: false,
-                        message: data?.message ||
-                            'スタッフの削除に失敗しました。画面の情報は変更していません。'
+                        message: '削除対象を選択してください。'
                     });
                     return;
                 }
 
-                // API成功後にだけローカル状態から削除
-                staffs = staffs.filter(item => item.staffId !== staffId);
+                const staff = staffs.find(
+                    item =>
+                    Number(item.id) ===
+                    Number(staffId)
+                );
 
-                renderStaffs();
-
-                document.getElementById('deleteForm').reset();
-
-                // 削除したスタッフを編集中だった場合はフォームをリセット
                 if (
-                    document.getElementById('originalStaffId').value === staffId
+                    staff &&
+                    !confirm(
+                        `スタッフ「${staff.name}」を削除しますか？`
+                    )
                 ) {
-                    resetForm();
+                    return;
                 }
 
-                renderResult({
-                    success: true,
-                    message: data.message || 'スタッフを削除しました。',
-                    data: data.data
-                });
-            })
-            .catch(error => {
-                console.error('Error:', error);
+                const deleteButton =
+                    document.getElementById(
+                        'deleteStaffBtn'
+                    );
 
-                renderResult({
-                    success: false,
-                    message: error.message ||
-                        '通信エラーが発生しました。画面の情報は変更していません。'
-                });
-            })
-            .finally(() => {
-                deleteButton.disabled = false;
-            });
-        });
+                deleteButton.disabled = true;
 
-        // 初期表示
-        setPasswordRequirement(false);
-        renderStoreCheckboxes();
-        renderStaffs();
+                try {
+
+                    const result =
+                        await postJson(
+                            STAFF_DELETE_API, {
+                                staffId: Number(staffId)
+                            }
+                        );
+
+                    renderResult({
+                        success: true,
+                        message: result.message ||
+                            'スタッフを削除しました。'
+                    });
+
+                    document.getElementById(
+                        'deleteForm'
+                    ).reset();
+
+                    if (
+                        document.getElementById(
+                            'originalStaffId'
+                        ).value === staffId
+                    ) {
+                        resetForm();
+                    }
+
+                    await loadStaffs();
+
+                } catch (error) {
+
+                    renderResult({
+                        success: false,
+                        message: error.message ||
+                            '削除に失敗しました。'
+                    });
+
+                } finally {
+                    deleteButton.disabled = false;
+                }
+            }
+        );
+
+        window.addEventListener(
+            'load',
+            async () => {
+
+                try {
+
+                    await waitForCsrfToken();
+
+                    await loadStores();
+                    await loadStaffs();
+
+                    setPasswordRequirement(false);
+
+                } catch (error) {
+
+                    renderResult({
+                        success: false,
+                        message: error.message ||
+                            '初期表示に失敗しました。'
+                    });
+
+                    console.error(error);
+                }
+            }
+        );
     </script>
 
     <!-- フッター読み込み -->
@@ -749,4 +858,5 @@
     <?php include_once $_SERVER['DOCUMENT_ROOT'] . '/components/fetch_csrf_token.php'; ?>
 
 </body>
+
 </html>

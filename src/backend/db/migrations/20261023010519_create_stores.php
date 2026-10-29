@@ -21,10 +21,10 @@ final class CreateStores extends AbstractMigration
     {
         $table = $this->table('stores');
 
-    $table
-        ->addColumn('name', 'string', [
-            'limit' => 255,
-        ])
-        ->create();
+        $table
+            ->addColumn('name', 'string', [
+                'limit' => 255,
+            ])
+            ->create();
     }
 }
