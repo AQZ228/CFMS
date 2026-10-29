@@ -121,7 +121,7 @@
                     `<div class="alert alert-success">${data.message}</div>`;
 
                 // 担当店舗選択ページへ遷移
-                window.location.href = '/staff/main.php';
+                window.location.href = '/staff/staff_main.php';
 
             } else {
 
