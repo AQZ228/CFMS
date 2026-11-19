@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 
@@ -26,6 +27,9 @@
     <!-- CommentAnchor: Bootstrapの読み込み -->
     <link rel="stylesheet" href="/lib/bootstrap-5.3.8-dist/css/bootstrap.min.css">
     <script src="/lib/bootstrap-5.3.8-dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- CommentAnchor: Excel出力ライブラリ -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <input type="hidden" class="csrf_token" value="">
 </head>
@@ -56,14 +60,30 @@
                     aria-live="polite">
                 </div>
 
-                <!-- 再読込 -->
-                <div class="d-flex justify-content-end mb-4">
+                <!-- 再読み込み・ダウンロード -->
+                <div class="d-flex justify-content-end gap-2 mb-4 flex-wrap">
+
+                    <button
+                        type="button"
+                        id="downloadCsvButton"
+                        class="btn btn-success">
+                        CSVダウンロード
+                    </button>
+
+                    <button
+                        type="button"
+                        id="downloadExcelButton"
+                        class="btn btn-primary">
+                        Excelダウンロード
+                    </button>
+
                     <button
                         type="button"
                         id="reloadButton"
                         class="btn btn-outline-primary">
                         再読み込み
                     </button>
+
                 </div>
 
                 <!-- 集計サマリー -->
@@ -221,6 +241,16 @@
                 'reloadButton'
             );
 
+        const downloadCsvButton =
+            document.getElementById(
+                'downloadCsvButton'
+            );
+
+        const downloadExcelButton =
+            document.getElementById(
+                'downloadExcelButton'
+            );
+
         const totalUsersElement =
             document.getElementById(
                 'totalUsers'
@@ -261,6 +291,9 @@
         // =====================================
 
         let loading = false;
+
+        // 最新の集計データ
+        let statisticsData = null;
 
         // =====================================
         // メッセージ表示
@@ -424,6 +457,9 @@
                         STATISTICS_API
                     );
 
+                // ダウンロード用に集計データを保存
+                statisticsData = data;
+
                 totalUsersElement.textContent =
                     Number(
                         data.totalUsers ?? 0
@@ -471,6 +507,7 @@
                     false;
             }
         }
+
         // =====================================
         // 利用者ランキング描画
         // =====================================
@@ -669,6 +706,272 @@
         }
 
         // =====================================
+        // ダウンロード共通処理
+        // =====================================
+
+        function getDownloadData() {
+
+            if (!statisticsData) {
+
+                showResult(
+                    'ダウンロードするデータがありません。',
+                    'warning'
+                );
+
+                return null;
+            }
+
+            return [
+                {
+                    sheetName: 'ユーザー集計',
+                    data: [
+                        ['項目', '人数'],
+                        [
+                            '総ユーザー数',
+                            Number(statisticsData.totalUsers ?? 0)
+                        ],
+                        [
+                            'アクティブユーザー',
+                            Number(statisticsData.activeUsers ?? 0)
+                        ],
+                        [
+                            '終了済みユーザー',
+                            Number(statisticsData.finishedUsers ?? 0)
+                        ]
+                    ]
+                },
+                {
+                    sheetName: '利用者ランキング',
+                    data: [
+                        ['順位', 'ユーザートークン', '得点'],
+                        ...(Array.isArray(statisticsData.recentUserRanking)
+                            ? statisticsData.recentUserRanking.map(
+                                (user, index) => [
+                                    index + 1,
+                                    user.userId ?? '-',
+                                    Number(user.useCount ?? 0)
+                                ]
+                            )
+                            : [])
+                    ]
+                },
+                {
+                    sheetName: '店舗別ランキング',
+                    data: [
+                        ['順位', '店舗ID', '店舗名', '利用者数'],
+                        ...(Array.isArray(statisticsData.storeUserRanking)
+                            ? statisticsData.storeUserRanking.map(
+                                (store, index) => [
+                                    index + 1,
+                                    store.storeId ?? '-',
+                                    store.storeName ?? '-',
+                                    Number(store.userCount ?? 0)
+                                ]
+                            )
+                            : [])
+                    ]
+                }
+            ];
+        }
+
+        // =====================================
+        // ファイル名用の日付
+        // =====================================
+
+        function getDateString() {
+
+            const now =
+                new Date();
+
+            const year =
+                now.getFullYear();
+
+            const month =
+                String(
+                    now.getMonth() + 1
+                ).padStart(2, '0');
+
+            const day =
+                String(
+                    now.getDate()
+                ).padStart(2, '0');
+
+            return `${year}${month}${day}`;
+        }
+
+        // =====================================
+        // CSVダウンロード
+        // =====================================
+
+        function downloadCsv() {
+
+            const sheets =
+                getDownloadData();
+
+            if (!sheets) {
+                return;
+            }
+
+            const csvRows = [];
+
+            sheets.forEach(sheet => {
+
+                csvRows.push(
+                    `"${sheet.sheetName}"`
+                );
+
+                sheet.data.forEach(row => {
+
+                    const csvRow =
+                        row.map(value => {
+
+                            const text =
+                                String(value ?? '');
+
+                            return '"' +
+                                text.replace(/"/g, '""') +
+                                '"';
+
+                        }).join(',');
+
+                    csvRows.push(csvRow);
+                });
+
+                csvRows.push('');
+            });
+
+            // Excelで日本語が文字化けしないようにBOMを追加
+            const csvContent =
+                '\uFEFF' + csvRows.join('\r\n');
+
+            const blob =
+                new Blob(
+                    [csvContent],
+                    {
+                        type: 'text/csv;charset=utf-8;'
+                    }
+                );
+
+            const url =
+                URL.createObjectURL(blob);
+
+            const link =
+                document.createElement('a');
+
+            link.href = url;
+
+            link.download =
+                `CFMS集計データ_${getDateString()}.csv`;
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            link.remove();
+
+            URL.revokeObjectURL(url);
+
+            showResult(
+                'CSVファイルをダウンロードしました。',
+                'success'
+            );
+        }
+
+        // =====================================
+        // Excelダウンロード
+        // =====================================
+
+        function downloadExcel() {
+
+            const sheets =
+                getDownloadData();
+
+            if (!sheets) {
+                return;
+            }
+
+            if (
+                typeof XLSX === 'undefined'
+            ) {
+
+                showResult(
+                    'Excel出力ライブラリを読み込めませんでした。',
+                    'danger'
+                );
+
+                return;
+            }
+
+            // Excelブック作成
+            const workbook =
+                XLSX.utils.book_new();
+
+            sheets.forEach(sheet => {
+
+                const worksheet =
+                    XLSX.utils.aoa_to_sheet(
+                        sheet.data
+                    );
+
+                // 列幅設定
+                worksheet['!cols'] =
+                    sheet.data[0].map(
+                        (header, index) => {
+
+                            const maxLength =
+                                Math.max(
+                                    String(header).length,
+                                    ...sheet.data.slice(1).map(
+                                        row =>
+                                            String(
+                                                row[index] ?? ''
+                                            ).length
+                                    )
+                                );
+
+                            return {
+                                wch: Math.min(
+                                    Math.max(maxLength + 4, 12),
+                                    40
+                                )
+                            };
+                        }
+                    );
+
+                XLSX.utils.book_append_sheet(
+                    workbook,
+                    worksheet,
+                    sheet.sheetName
+                );
+            });
+
+            // Excelファイル出力
+            XLSX.writeFile(
+                workbook,
+                `CFMS集計データ_${getDateString()}.xlsx`
+            );
+
+            showResult(
+                'Excelファイルをダウンロードしました。',
+                'success'
+            );
+        }
+
+        // =====================================
+        // ダウンロードボタン
+        // =====================================
+
+        downloadCsvButton.addEventListener(
+            'click',
+            downloadCsv
+        );
+
+        downloadExcelButton.addEventListener(
+            'click',
+            downloadExcel
+        );
+
+        // =====================================
         // 再読み込み
         // =====================================
 
@@ -712,6 +1015,7 @@
         // =====================================
 
         initialize();
+
     </script>
 
     <!-- CommentAnchor: 共通フッター -->
