@@ -223,12 +223,39 @@
                 await scanner.start({
                         facingMode: 'environment'
                     }, {
-                        fps: 10,
-                        qrbox: {
-                            width: 250,
-                            height: 250
+                        fps: 20,
+
+                        // カメラ映像のサイズに合わせて読み取り範囲を拡大
+                        qrbox: (viewfinderWidth, viewfinderHeight) => {
+                            const edge = Math.floor(
+                                Math.min(viewfinderWidth, viewfinderHeight) * 0.9
+                            );
+
+                            const size = Math.max(180, edge);
+
+                            return {
+                                width: Math.min(size, viewfinderWidth, viewfinderHeight),
+                                height: Math.min(size, viewfinderWidth, viewfinderHeight)
+                            };
                         },
-                        aspectRatio: 1.0
+
+                        aspectRatio: 1.0,
+
+                        // カメラの高解像度・連続オートフォーカスを優先
+                        videoConstraints: {
+                            facingMode: 'environment',
+                            width: {
+                                ideal: 1920
+                            },
+                            height: {
+                                ideal: 1080
+                            },
+                            advanced: [{
+                                focusMode: 'continuous'
+                            }]
+                        },
+
+                        disableFlip: false
                     },
                     onQrCodeScanned,
                     () => {}

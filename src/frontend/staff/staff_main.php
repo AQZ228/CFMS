@@ -100,24 +100,6 @@
                             </div>
                         </div>
                     </div>
-                    <!-- ユーザー作成・得点付与 -->
-                    <div class="col-12 col-md-6 col-xl-4" data-menu-page="admin">
-                        <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-body p-4 d-flex flex-column">
-                                <div class="mb-3">
-                                    <span class="badge text-bg-warning">USER</span>
-                                </div>
-                                <h3 class="h5 fw-bold">ユーザー作成・得点付与</h3>
-                                <p class="text-secondary flex-grow-1">
-                                    新しい利用者を登録し、必要に応じて初期得点を記録します。
-                                </p>
-                                <a href="/admin/bulkscore_registration.php"
-                                    class="btn btn-outline-warning w-100">
-                                    ユーザー作成を開く
-                                </a>
-                            </div>
-                        </div>
-                    </div>
                     <!-- 得点付与 -->
                     <div class="col-12 col-md-6 col-xl-4" data-menu-page="store">
                         <div class="card h-100 border-0 shadow-sm">
@@ -168,6 +150,60 @@
                                 <a href="/staff/activate.php"
                                     class="btn btn-outline-dark w-100">
                                     受付画面の管理メニューを開く
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 再ログイン用パスワード発行ページ -->
+                    <div class="col-12 col-md-6 col-xl-4" data-menu-page="admin">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body p-4 d-flex flex-column">
+                                <div class="mb-3">
+                                    <span class="badge text-bg-dark">ADMIN</span>
+                                </div>
+                                <h3 class="h5 fw-bold">再ログイン用パスワード発行</h3>
+                                <p class="text-secondary flex-grow-1">
+                                    アカウントの再ログイン用パスワードを発行します。発行されたパスワードは、受付画面での再ログインに使用できます。
+                                </p>
+                                <a href="/admin/issue_passcode.php"
+                                    class="btn btn-outline-dark w-100">
+                                    再ログイン用パスワード発行ページを開く
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 紙媒体運用ページ -->
+                    <div class="col-12 col-md-6 col-xl-4" data-menu-page="admin">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body p-4 d-flex flex-column">
+                                <div class="mb-3">
+                                    <span class="badge text-bg-dark">ADMIN</span>
+                                </div>
+                                <h3 class="h5 fw-bold">紙媒体運用</h3>
+                                <p class="text-secondary flex-grow-1">
+                                    紙媒体の運用に関する管理機能を利用します。
+                                </p>
+                                <a href="/admin/bulk_add.php"
+                                    class="btn btn-outline-dark w-100">
+                                    紙媒体運用ページを開く
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 分析ページ -->
+                    <div class="col-12 col-md-6 col-xl-4" data-menu-page="admin">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body p-4 d-flex flex-column">
+                                <div class="mb-3">
+                                    <span class="badge text-bg-dark">ADMIN</span>
+                                </div>
+                                <h3 class="h5 fw-bold">分析</h3>
+                                <p class="text-secondary flex-grow-1">
+                                    利用者の得点や利用状況を分析し、結果を確認します。
+                                </p>
+                                <a href="/admin/analysis.php"
+                                    class="btn btn-outline-dark w-100">
+                                    分析ページを開く
                                 </a>
                             </div>
                         </div>

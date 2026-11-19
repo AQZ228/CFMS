@@ -67,7 +67,8 @@
                 font-size: 1.6rem;
             }
         }
-        //!SECTION
+
+        /*!SECTION*/
     </style>
 </head>
 
@@ -146,7 +147,7 @@
                     <div class="card-body">
                         <div class="mb-4">
                             <div class="info-label mb-1">対象ユーザーID</div>
-                            <div id="userId" class="fs-5 fw-bold">未検索</div>
+                            <div id="userToken" class="fs-5 fw-bold">未検索</div>
                         </div>
 
                         <div class="row g-3 mb-4">
@@ -213,7 +214,7 @@
         const stopScannerButton = document.getElementById('stopScannerButton');
         const resultDiv = document.getElementById('result');
 
-        const userIdDiv = document.getElementById('userId');
+        const userTokenDiv = document.getElementById('userToken');
         const activeStatusSpan = document.getElementById('activeStatus');
         const finishedStatusSpan = document.getElementById('finishedStatus');
         const finishedAtDiv = document.getElementById('finishedAt');
@@ -259,7 +260,7 @@
          * @param {Object} user ユーザー情報
          */
         function renderUser(user) {
-            userIdDiv.textContent = String(user.userId);
+            userTokenDiv.textContent = String(user.token);
             updateBadge(
                 activeStatusSpan,
                 user.isActive ? '有効' : '未アクティブ',
@@ -274,17 +275,16 @@
                 isFinished ? 'danger' : 'success'
             );
 
-            finishedAtDiv.textContent = isFinished
-                ? String(user.finishedAt)
-                : '未終了';
+            finishedAtDiv.textContent = isFinished ?
+                String(user.finishedAt) :
+                '未終了';
 
             const score = Number(user.totalScore);
             totalScoreSpan.textContent =
                 Number.isFinite(score) ? score.toLocaleString('ja-JP') : '--';
 
-            // 未アクティブ・終了済みユーザーは終了処理の対象外とする。
-            finishButton.disabled =
-                !user.isActive || isFinished || isFinishing;
+            // 未アクティブ・終了済みユーザーは終了user.token処理の対象外とする。
+            finishButton.disabled = !user.isActive || isFinished || isFinishing;
         }
 
         /**
@@ -292,7 +292,7 @@
          */
         function resetUserInfo() {
             currentUser = null;
-            userIdDiv.textContent = '未検索';
+            userTokenDiv.textContent = '未検索';
             updateBadge(activeStatusSpan, '未確認', 'secondary');
             updateBadge(finishedStatusSpan, '未確認', 'secondary');
             finishedAtDiv.textContent = '未確認';
@@ -333,8 +333,7 @@
 
             try {
                 const response = await fetch(
-                    '<?= rtrim(getenv('API_URL') ?: '', '/') ?>/user/lookupByToken',
-                    {
+                    '<?= rtrim(getenv('API_URL') ?: '', '/') ?>/admin/lookup_by_token.php', {
                         method: 'POST',
                         credentials: 'include',
                         headers: {
@@ -342,7 +341,7 @@
                         },
                         body: JSON.stringify({
                             token,
-                            csrfToken: document.querySelector('.csrf_token').value
+                            csrf_token: document.querySelector('.csrf_token').value
                         })
                     }
                 );
@@ -355,7 +354,7 @@
                 }
 
                 if (
-                    user.userId === undefined ||
+                    user.token === undefined ||
                     typeof user.isActive !== 'boolean' ||
                     user.totalScore === undefined
                 ) {
@@ -364,7 +363,7 @@
 
                 currentUser = {
                     token,
-                    userId: user.userId,
+                    userToken: user.token,
                     isActive: user.isActive,
                     finishedAt: user.finishedAt ?? null,
                     totalScore: user.totalScore
@@ -398,7 +397,7 @@
             }
 
             const confirmed = window.confirm(
-                `ユーザーID: ${currentUser.userId}\n\n` +
+                `ユーザートークン: ${currentUser.token}\n\n` +
                 '景品を渡したことを確認しましたか？\n' +
                 'アカウントを終了すると、得点を付与できなくなります。'
             );
@@ -408,7 +407,7 @@
             }
 
             const targetToken = currentUser.token;
-            const targetUserId = currentUser.userId;
+            const targetuserToken = currentUser.token;
             const csrfToken = document.querySelector('.csrf_token').value;
 
             isFinishing = true;
@@ -418,8 +417,7 @@
 
             try {
                 const response = await fetch(
-                    '<?= rtrim(getenv('API_URL') ?: '', '/') ?>/user/finish',
-                    {
+                    '<?= rtrim(getenv('API_URL') ?: '', '/') ?>/admin/user_finish.php', {
                         method: 'POST',
                         credentials: 'include',
                         headers: {
@@ -427,7 +425,7 @@
                         },
                         body: JSON.stringify({
                             token: targetToken,
-                            csrfToken
+                            csrf_token: csrfToken
                         })
                     }
                 );
@@ -438,7 +436,7 @@
                 if (
                     !currentUser ||
                     currentUser.token !== targetToken ||
-                    String(currentUser.userId) !== String(targetUserId)
+                    String(currentUser.token) !== String(targetuserToken)
                 ) {
                     showResult(
                         '終了処理の結果を確認できません。対象ユーザーを再検索してください。',
@@ -474,7 +472,7 @@
         //!SECTION
 
         //SECTION: フォームイベント
-        lookupForm.addEventListener('submit', async function (event) {
+        lookupForm.addEventListener('submit', async function(event) {
             event.preventDefault();
 
             const token = tokenInput.value.trim();
@@ -506,54 +504,132 @@
             }
 
             if (typeof Html5Qrcode === 'undefined') {
-                showResult('QRコードライブラリを読み込めませんでした。', 'danger');
+                showResult('QRコードライブラリを読み込めませんでした。ページを再読み込みしてください。', 'danger');
                 return;
             }
 
+            if (!window.isSecureContext) {
+                showResult('カメラを使用するにはHTTPS接続が必要です。', 'danger');
+                return;
+            }
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showResult('このブラウザーではカメラ機能を利用できません。カメラの権限とブラウザー設定を確認してください。', 'danger');
+                return;
+            }
+
+            startScannerButton.disabled = true;
+            showResult('カメラを起動しています。カメラの使用を許可してください。', 'info');
+
             try {
-                html5QrCode = new Html5Qrcode('reader');
+                html5QrCode = new Html5Qrcode('reader', {
+                    formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+                    verbose: false
+                });
 
-                const cameras = await Html5Qrcode.getCameras();
-
-                if (!cameras || cameras.length === 0) {
-                    throw new Error('利用できるカメラが見つかりません。');
-                }
-
-                const camera = cameras.find(item =>
-                    /back|rear|environment|背面/i.test(item.label)
-                ) || cameras[0];
-
-                await html5QrCode.start(
-                    camera.id,
-                    {
-                        fps: 10,
-                        qrbox: {
-                            width: 250,
-                            height: 250
-                        }
+                // 固定の250pxでは端末によって読み取り枠が映像からはみ出すため、
+                // 実際のプレビューサイズに合わせて読み取り枠を決める。
+                const scannerConfig = {
+                    fps: 20,
+                    qrbox: (viewfinderWidth, viewfinderHeight) => {
+                        const edge = Math.floor(
+                            Math.min(viewfinderWidth, viewfinderHeight) * 0.9
+                        );
+                        const size = Math.max(180, edge);
+                        return {
+                            width: Math.min(size, viewfinderWidth, viewfinderHeight),
+                            height: Math.min(size, viewfinderWidth, viewfinderHeight)
+                        };
                     },
-                    async decodedText => {
-                        // 読み取り成功後、カメラを停止してから検索する。
-                        tokenInput.value = decodedText.trim();
-                        await stopScanner();
-                        await lookupUser(tokenInput.value);
-                    },
-                    () => {
-                        // 読み取り途中の失敗は継続する。
+                    aspectRatio: 1.0,
+                    disableFlip: false
+                };
+
+                const onScanSuccess = async decodedText => {
+                    // 二重検出による検索の多重実行を防止する。
+                    if (!scannerRunning) {
+                        return;
                     }
-                );
+
+                    scannerRunning = false;
+                    tokenInput.value = decodedText.trim();
+
+                    try {
+                        await html5QrCode.stop();
+                        html5QrCode.clear();
+                    } catch (stopError) {
+                        console.warn('QRコードリーダー停止エラー:', stopError);
+                    } finally {
+                        startScannerButton.disabled = false;
+                        stopScannerButton.disabled = true;
+                    }
+
+                    await lookupUser(tokenInput.value);
+                };
+
+                const onScanFailure = errorMessage => {
+                    // QRコード未検出は通常の状態なので、画面には表示しない。
+                    // 必要な場合のみ開発者ツールで確認できるようにする。
+                    if (errorMessage && !String(errorMessage).includes('No MultiFormat Readers')) {
+                        console.debug('QRコード読み取り中:', errorMessage);
+                    }
+                };
+
+                try {
+                    // facingModeを指定して背面カメラを優先する。
+                    await html5QrCode.start({
+                            facingMode: 'environment'
+                        },
+                        scannerConfig,
+                        onScanSuccess,
+                        onScanFailure
+                    );
+                } catch (environmentError) {
+                    // facingMode指定に対応しない環境では、カメラID指定に切り替える。
+                    const cameras = await Html5Qrcode.getCameras();
+
+                    if (!cameras || cameras.length === 0) {
+                        throw environmentError;
+                    }
+
+                    const camera = cameras.find(item =>
+                        /back|rear|environment|背面/i.test(item.label)
+                    ) || cameras[cameras.length - 1];
+
+                    await html5QrCode.start(
+                        camera.id,
+                        scannerConfig,
+                        onScanSuccess,
+                        onScanFailure
+                    );
+                }
 
                 scannerRunning = true;
                 startScannerButton.disabled = true;
                 stopScannerButton.disabled = false;
-                showResult('QRコードをカメラにかざしてください。', 'info');
+                showResult('QRコードを読み取ります。画面中央の枠内にQRコード全体を映してください。', 'info');
             } catch (error) {
                 scannerRunning = false;
                 startScannerButton.disabled = false;
                 stopScannerButton.disabled = true;
 
+                if (html5QrCode) {
+                    try {
+                        if (html5QrCode.isScanning) {
+                            await html5QrCode.stop();
+                        }
+                        html5QrCode.clear();
+                    } catch (cleanupError) {
+                        console.warn('カメラ解放エラー:', cleanupError);
+                    }
+                }
+
+                const message = error && error.message ?
+                    error.message :
+                    'カメラを起動できませんでした。';
+
                 showResult(
-                    error.message || 'カメラを起動できませんでした。',
+                    'カメラを起動できませんでした。カメラの使用許可、他のアプリによるカメラ占有、HTTPS接続を確認してください。(' + message + ')',
                     'danger'
                 );
             }
@@ -563,12 +639,17 @@
          * QRコードリーダーを停止する。
          */
         async function stopScanner() {
-            if (!html5QrCode || !scannerRunning) {
+            if (!html5QrCode) {
+                scannerRunning = false;
+                startScannerButton.disabled = false;
+                stopScannerButton.disabled = true;
                 return;
             }
 
             try {
-                await html5QrCode.stop();
+                if (html5QrCode.isScanning) {
+                    await html5QrCode.stop();
+                }
                 html5QrCode.clear();
             } catch (error) {
                 console.error('QRコードリーダー停止エラー:', error);

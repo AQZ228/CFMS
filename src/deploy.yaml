@@ -1,0 +1,59 @@
+services:
+  backend:
+    build: ./backend
+    volumes:
+      - ./backend:/var/www/html
+      - .env:/var/www/html/.env
+
+    environment:
+      - TZ=Asia/Tokyo
+      - DB_NAME=${DB_NAME?Database name is not set}
+      - DB_USER=${DB_USER?User name is not set}
+      - DB_PASS=${DB_PASS?Password is not set}
+      - DB_HOST=${DB_HOST?Database host is not set}
+      - DB_PORT=${DB_PORT?Database port is not set}
+      - APP_ENV=${APP_ENV?App environment is not set}
+      - APP_URL=${APP_URL?App URL is not set}
+      - API_URL=${API_URL?API URL is not set}
+      - ADMIN_NAME=${ADMIN_NAME?Admin username is not set}
+      - ADMIN_PASS=${ADMIN_PASS?Admin password is not set}
+
+  frontend:
+    build: ./frontend
+    volumes:
+      - ./frontend:/var/www/html
+
+    environment:
+      - TZ=Asia/Tokyo
+      - API_URL=${API_URL?API URL is not set}
+      - APP_URL=${APP_URL?App URL is not set}
+
+  db:
+    image: mariadb:12.3
+
+    environment:
+      - TZ=Asia/Tokyo
+      - MARIADB_DATABASE=${DB_NAME?Database name is not set}
+      - MARIADB_USER=${DB_USER?User name is not set}
+      - MARIADB_PASSWORD=${DB_PASS?Password is not set}
+      - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASS?Root password is not set}
+      
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ./db:/var/lib/mysql
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: always
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:?トークンがありません}
+    command: tunnel --no-autoupdate run
+
+volumes:
+  db_data:
+
